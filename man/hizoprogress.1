@@ -1,0 +1,243 @@
+.TH HIZOSELECT 1 "7 Sep 2017" "Version 1.5" "HizoProgress Control Manual"
+
+
+.SH NAME
+\fBhizoprogress\fP makes it easy to create a fully customizable \fBprogress bar\fP.
+
+
+.SH SYNOPSIS
+\fBhizoprogress\fP
+[\fB-L\fP|\fB--lang\fP \fIlanguage\fP]
+[\fB-p\fP|\fB--progress\fP \fIinteger\fP / \fIpercentage\fP]
+[\fB-d\fP|\fB--debug\fP]
+[\fB-b\fP|\fB--body\fP \fIcharacter(s)\fP]
+[\fB-h\fP|\fB--head\fP \fIcharacter(s)\fP]
+[\fB-l\fP|\fB--limit\fP \fIinteger\fP / \fIpercentage\fP]
+[\fB-o\fP|\fB--output\fP \fIformat\fP]
+[\fB-of\fP|\fB--output-finish\fP \fIformat\fP]
+[\fB-q\fP|\fB--quiet\fP]
+[\fB-r\fP|\fB--remainder\fP \fIcharacter(s)\fP]
+[\fB-R\fP|\fB--reverse\fP]
+[\fB-s\fP|\fB--space\fP \fIinteger\fP]
+.PP
+\fBhizoprogress\fP
+[\fB-L\fP|\fB--lang\fP \fIlanguage\fP]
+[\fB-?\fP|\fB--help\fP]
+.PP
+\fBhizoprogress\fP
+[\fB-L\fP|\fB--lang\fP \fIlanguage\fP]
+[\fB-e\fP|\fB--examples\fP \fIinteger\fP]
+.PP
+\fBhizoprogress\fP
+[\fB-L\fP|\fB--lang\fP \fIlanguage\fP]
+[\fB-v\fP|\fB--version\fP]
+
+
+.SH DESCRIPTION
+\fBhizoprogress\fP creates a progress bar that's completely customizable.
+.br
+The colors are configurable and it is possible to replace the progress bar by an animation or to cumulate both.
+.br
+Some video examples : https://asciinema.org/a/YpohbfZEd8guOIPjs0po1lmxh
+
+
+.SH OPTIONS
+The short arguments could not be concatenated like that : -bhr...
+.br
+It is impossible to use an argument as a value.
+.RS
+.RS
+\fIEg\fP: -h "-b"
+.RE
+.RE
+
+.IP \fB-b,\ --body\ \fIcharacter(s)\fP
+Character(s) forming the body of the progress bar (\fI%4=\fP by default).
+.br
+If no value is given, the bar will not progress.
+.br
+The option supports the following internal variables : \fI%p\fP / \fI%p\fP / \fI%c\fP / \fI%?\fP / \fI%[0-9]\fP
+.RS
+.RS
+0%: No one body's character(s).
+.br
+100%: Only body's character(s).
+.RE
+.RE
+
+.IP \fB-d,\ --debug\fP
+Displays the values of the different variables used (\fIfalse\fP by default).
+.br
+Do not use in production.
+
+.IP \fB-e,\ --examples\fP\ \fIinteger\fP
+Displays many examples of what the script can do, possible integers:
+.RS
+.RS
+\fI1\fP: Simple examples
+.br
+\fI2\fP: Examples using text
+.br
+\fI3\fP: Examples using drawings
+.br
+\fI4\fP: Examples using a two half bar
+.br
+\fI5\fP: Examples using alternating two drawings
+.br
+\fI6\fP: Examples using alternating multiple drawings
+.RE
+.RE
+
+.IP \fB-h,\ --head\ \fIcharacter(s)\fP
+Character(s) to be used as the head of the progress bar (\fI%1>\fP by default).
+.br
+The option supports the following internal variables : \fI%p\fP / \fI%p\fP / \fI%?\fP / \fI%[0-9]\fP
+.br
+If no value is given, the head will be empty.
+.RS
+.RS
+0%: No head's character(s).
+.br
+100%: No head's character(s).
+.RE
+.RE
+
+.IP \fB-l,\ --limit\fP\ \fIinteger\fP\ /\ \fIpercentage\fP
+Maximum line size (\fItput cols - 1\fP by default).
+.br
+The value can be a number of columns or a percentage.
+
+.IP \fB-L,\ --lang\fP\ \fIfr\fP\ /\ \fIen\fP
+Language to be used between English and French (\fIauto\fP by default).
+.br
+This option should be put at the beginning of the argument list.
+
+.IP \fB-o,\ --output\ \fIformat\fP
+Formatting the display before reaching 100% (\fI[%n] [%b]\fP by default).
+.br
+The option supports the following internal variables : \fI%p\fP / \fI%p\fP / \fI%c\fP / \fI%?\fP / \fI%[0-9]\fP
+
+.IP \fB-of,\ --output-finish\ \fIformat\fP
+Formatting the display once it reaches 100%.
+.br
+The option supports the following internal variables : \fI%p\fP / \fI%p\fP / \fI%c\fP / \fI%?\fP / \fI%[0-9]\fP
+
+.IP \fB-p,\ --progress\fP\ \fIinteger\fP\ /\ \fIpercentage\fP
+\fBhis is a mandatory requirement.\fP
+.br
+Percentage (with or without %) or -, to read stdin, used to raise the bar (\fI-\fP by default).
+.br
+The value must be between 0 and 100.
+
+.IP \fB-q,\ --quiet\fP
+Hide the error returns.
+.br
+These returns are displayed on stderr.
+
+.IP \fB-r,\ --remainder\ \fIcharacter(s)\fP
+Character(s) remaining, work still to be done. ("\fI%3 \fP" by default).
+.br
+If no value is given, there will be nothing after the head.
+.br
+The option supports the following internal variables : \fI%p\fP / \fI%p\fP / \fI%c\fP / \fI%?\fP / \fI%[0-9]\fP
+.RS
+.RS
+0%: Only these characters will be used.
+.br
+100%: There will be no more of these characters.
+.RE
+.RE
+
+.IP \fB-R,\ --reverse\fP
+Reverse the direction of the bar.
+
+.IP \fB-s,\ --space\ \fIinteger\fP
+Allows you to add or subtract spaces in the return display if the return display is not optimal.
+.br
+Some characters may be mismanaged and it may be necessary to play with this element.
+.br
+The value can be negative or positive.
+
+.IP \fB-v,\ --version\fP
+Version of the hizoprogress command.
+
+.IP \fB-?,\ --help\fP
+Display an explanation equivalent to this man with more layout.
+
+
+.SH INTERNAL VARIABLES
+.IP \fB%b\fP
+.br
+The variable will be replaced by the bar.
+
+.IP \fB%b1/%b2\fP
+.br
+%1 represents the first part, i.e. the beginning, of the bar.
+.br
+%2 represents the 2nd part, i.e. the end, of the bar.
+
+.IP \fB%c\fP
+.br
+Centers text between 2%c.
+.br
+What is before will be at the beginning of the bar or the line.
+.br
+What is after will be at the end of the bar or the line.
+.br
+.RS
+.RS
+\fIEg\fP: %c Text to center %c
+.RE
+.RE
+
+.IP \fB%p/%P\fP
+.br
+Variable replaced by the 3-digit value of the progression.
+.br
+%P adds the % sign to the number.
+
+.IP \fB%[0-9]*/%?\fP
+.br
+Number of the colour to be used for the text that follows.
+.br
+Accepts one font color and one background color : \fI%Police/Background\fP.
+.br
+Use the character \fI?\fP to replace it by a random color.
+.br
+Use \fI%00\fP to reset the following text colors.
+.br
+.RS
+.RS
+\fIEg\fP: %?/25 | %1/% | %100/80 | %? | %125
+.RE
+.RE
+.br
+To see the colors and them numbers: \fBprintf\fP "\fI\\e[48;5;%dm%d \\e[0m\fP" {0..255}
+
+.SH CURSOR
+You can hide the prompt cursor with the command \fBtput\fP:
+.RS
+tput civis
+.br
+for x in {1..100}; do hizoprogress -n ${x}; sleep 0.05; done
+.br
+tput cnorm
+.RE
+
+.PP
+Caution: If the program exits (\fBctrl+c\fP) before it can launch \fBtput cnorm\fP, the cursor will remain hidden.
+.br
+To avoid this kind of problem, trap the \fBctrl+c\fP keys before the above code with:
+.br
+.RS
+function ctrl_c { tput cnorm; exit 1; }
+.br
+trap ctrl_c INT
+.RE
+
+.SH AUTHOR
+\fITerence Belleguic\fP aka \fIHizo\fP
+.MT hizo@free.fr
+.ME
+.br
+Thank's to \fIhttps://www.developpez.net\fP, and \fIhttps://forum.ubuntu-fr.org\fP.

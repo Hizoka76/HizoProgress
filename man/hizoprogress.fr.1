@@ -1,0 +1,245 @@
+.TH HIZOSELECT 1 "30 Apr 2020" "Version 2.0" "Manuel de la commande HizoProgress"
+
+
+.SH NOM
+\fBhizoprogress\fP permet de créer facilement une \fIbarre de progression\fP complètement paramétrable.
+
+
+.SH UTILISATION
+\fBhizoprogress\fP
+[\fB-L\fP|\fB--lang\fP \fIlangue\fP]
+[\fB-p\fP|\fB--progress\fP \fIentier\fP / \fIpourcentage\fP]
+[\fB-d\fP|\fB--debug\fP]
+[\fB-b\fP|\fB--body\fP \fIcaractère(s)\fP]
+[\fB-h\fP|\fB--head\fP \fIcaractère(s)\fP]
+[\fB-l\fP|\fB--limit\fP \fIentier\fP / \fIpourcentage\fP]
+[\fB-o\fP|\fB--output\fP \fIformat\fP]
+[\fB-of\fP|\fB--output-finish\fP \fIformat\fP]
+[\fB-q\fP|\fB--quiet\fP]
+[\fB-r\fP|\fB--remainder\fP \fIcaractère(s)\fP]
+[\fB-R\fP|\fB--reverse\fP]
+[\fB-s\fP|\fB--space\fP \fIentier\fP]
+.PP
+\fBhizoprogress\fP
+[\fB-L\fP|\fB--lang\fP \fIlangue\fP]
+[\fB-?\fP|\fB--help\fP]
+.PP
+\fBhizoprogress\fP
+[\fB-L\fP|\fB--lang\fP \fIlangue\fP]
+[\fB-e\fP|\fB--examples\fP \fIentier\fP]
+.PP
+\fBhizoprogress\fP
+[\fB-L\fP|\fB--lang\fP \fIlangue\fP]
+[\fB-v\fP|\fB--version\fP]
+
+
+.SH DESCRIPTION
+\fBhizoprogress\fP crée une barre de progression qui est complètement paramétrable.
+.br
+Les couleurs sont paramétrables et il possible de remplacer la barre de progression par une animation ou de cumuler les deux.
+.br
+Vidéo de quelques exemples : https://asciinema.org/a/YpohbfZEd8guOIPjs0po1lmxh
+
+
+.SH OPTIONS
+Les arguments courts \fBne peuvent pas\fP être concaténés ainsi : -bhr...
+.br
+Il est impossible d'utiliser un argument comme valeur.
+.RS
+.RS
+\fIEx\fP : -h "-b"
+.RE
+.RE
+
+.IP \fB-b,\ --body\ \fIcaractère(s)\fP
+Caractère(s) formant le corps de la barre de progression (\fI%4=\fP par défaut).
+.br
+Si aucune valeur n'est donnée, la barre ne progressera pas.
+.br
+L'option prend en charge les variables internes suivantes : \fI%p\fP / \fI%P\fP / \fI%c\fP / \fI%?\fP / \fI%[0-9]\fP
+.RS
+.RS
+0% : Il n'y aura pas de corps.
+.br
+100% : Il n'y aura que corps.
+.RE
+.RE
+
+.IP \fB-d,\ --debug\fP
+Affiche les valeurs des différentes variables utilisées (\fIfaux\fP par défaut).
+.br
+Ne pas utiliser en production.
+
+.IP \fB-e,\ --examples\fP\ \fIentier\fP
+Affiche de nombreux exemples de ce que permet de faire le script, entiers possibles :
+.RS
+.RS
+\fI1\fP : Exemples simples
+.br
+\fI2\fP : Exemples utilisant du texte
+.br
+\fI3\fP : Exemples utilisant des dessins
+.br
+\fI4\fP : Exemples utilisant une barre en 2 parties
+.br
+\fI5\fP : Exemples utilisant l'alternance de 2 dessins
+.br
+\fI6\fP : Exemples utilisant l'alternance de plusieurs dessins
+.RE
+.RE
+
+.IP \fB-h,\ --head\ \fIcaractère(s)\fP
+Caractère(s) à utiliser comme tête de la barre de progression (\fI%1>\fP par défaut).
+.br
+L'option prend en charge les variables internes suivantes : \fI%p\fP / \fI%P\fP / \fI%?\fP / \fI%[0-9]\fP
+.br
+Si aucune valeur n'est donnée, la tête sera vide.
+.RS
+.RS
+0% : Il n'y aura pas de tête.
+.br
+100% : Il n'y aura pas de tête.
+.RE
+.RE
+
+.IP \fB-l,\ --limit\fP\ \fIentier\fP\ /\ \fIpourcentage\fP
+Taille maximale de la ligne (\fItput cols - 1\fP par défaut).
+.br
+La valeur attendue est soit un nombre de colonne, soit un pourcentage.
+
+.IP \fB-L,\ --lang\fP\ \fIfr\fP\ /\ \fIen\fP
+Langue à utiliser entre \fIfr\fP et \fIen\fP (\fIautomatique\fP par défaut).
+.br
+Cette option est à mettre au début de la liste des arguments.
+
+.IP \fB-o,\ --output\ \fIformat\fP
+Mise en forme de de l'affichage avant d'arriver à 100% (\fI[%n] [%b]\fP par défaut).
+.br
+L'option prend en charge les variables internes suivantes : \fI%p\fP / \fI%P\fP / \fI%c\fP / \fI%?\fP / \fI%[0-9]\fP
+
+.IP \fB-of,\ --output-finish\ \fIformat\fP
+Mise en forme de de l'affichage une fois arrivé à 100%.
+.br
+L'option prend en charge les variables internes suivantes : \fI%p\fP / \fI%P\fP / \fI%c\fP / \fI%?\fP / \fI%[0-9]\fP
+
+.IP \fB-p,\ --progress\fP\ \fIentier\fP\ /\ \fIpourcentage\fP
+\fBCette valeur est obligatoire.\fP
+.br
+Pourcentage (avec ou sans %) ou -, pour lire stdin, servant à faire progresser la barre (\fI-\fP par défaut).
+.br
+La valeur doit être comprise entre 0 et 100.
+
+.IP \fB-q,\ --quiet\fP
+Cache les retours d'erreur.
+.br
+Ces retours sont affichés sur stderr.
+
+.IP \fB-r,\ --remainder\ \fIcaractère(s)\fP
+Caractère(s) restants, travail restant, le(s) caractère(s) à venir ("\fI%3 \fP" par défaut).
+.br
+Si aucune valeur n'est donnée, il n'y aura rien après la tête.
+.br
+L'option prend en charge les variables internes suivantes : \fI%p\fP / \fI%P\fP / \fI%c\fP / \fI%?\fP / \fI%[0-9]\fP
+.RS
+.RS
+0% : Il n'y aura que ces caractères.
+.br
+100% : Il n'y aura plus ces caractères.
+.RE
+.RE
+
+.IP \fB-R,\ --reverse\fP
+Inverse le sens de progression de la barre.
+
+.IP \fB-s,\ --space\ \fIentier\fP
+Permet d'ajouter ou de soustraire des espaces dans l'affichage de retour si celui-ci n'est pas optimal.
+.br
+Certains caractères peuvent être mal gérés et il peut être nécessaire de jouer sur cet élément.
+.br
+La valeur peut être négative ou positive.
+
+.IP \fB-v,\ --version\fP
+Version de la commande hizoprogress.
+
+.IP \fB-?,\ --help\fP
+Afficher une explication équivalente à ce man avec plus de mise en page.
+
+
+.SH VARIABLES INTERNES
+.IP \fB%b\fP
+.br
+La variable sera remplacée par la barre.
+
+.IP \fB%b1/%b2\fP
+.br
+%1 représente la 1ere partie, donc le début, de la barre ou de la ligne.
+.br
+%2 représente la 2ème partie, donc la fin, de la barre ou de la ligne.
+
+.IP \fB%c\fP
+.br
+Centre le texte compris entre 2 %c.
+.br
+Ce qui est avant sera au début de la barre.
+.br
+Ce qui est après sera en fin de barre.
+.br
+.RS
+.RS
+\fIEx\fP : %c Texte à center %c
+.RE
+.RE
+
+.IP \fB%p/%P\fP
+.br
+Variable remplacée par la valeur, sur 3 chiffres, de la progression.
+.br
+%P ajoute le signe % au nombre.
+
+.IP \fB%[0-9]*/%?\fP
+.br
+Numéro de la couleur à utiliser pour le texte qui suit.
+.br
+Accepte une couleur de police et une couleur de fond : \fI%Police/Fond\fP.
+.br
+Utiliser le caractère \fI?\fP pour le remplacer par une couleur aléatoire.
+.br
+Utiliser \fI%00\fP pour réinitialiser les couleurs du texte qui suit.
+.br
+.RS
+.RS
+\fIEx\fP : %?/25 | %1/% | %100/80 | %? | %125
+.RE
+.RE
+.br
+Pour visualiser les couleurs et leur numéros : \fBprintf\fP "\fI\\e[48;5;%dm%d \\e[0m\fP" {0..255}
+
+
+.SH CURSEUR
+Il est possible de cacher le curseur du prompt avec la commande \fBtput\fP :
+.RS
+tput civis
+.br
+for x in {1..100}; do hizoprogress -n ${x}; sleep 0.05; done
+.br
+tput cnorm
+.RE
+
+.PP
+Attention : Si le programme quitte (\fBctrl+c\fP) avant de pouvoir lancer \fBtput cnorm\fP, le curseur restera caché.
+.br
+Pour éviter ce genre de problème, il faut piéger les touches \fBctrl+c\fP avant le code ci-dessus avec :
+.br
+.RS
+function ctrl_c { tput cnorm; exit 1; }
+.br
+trap ctrl_c INT
+.RE
+
+
+.SH AUTEUR
+\fITerence Belleguic\fP aka \fIHizo\fP
+.MT hizo@free.fr
+.ME
+.br
+Merci aux formus \fIhttps://www.developpez.net\fP et \fIhttps://forum.ubuntu-fr.org\fP.

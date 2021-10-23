@@ -1,0 +1,31 @@
+# hizoprogress(1) completion                                    -*- shell-script -*-
+
+# https://debian-administration.org/article/316/An_introduction_to_bash_completion_part_1
+# https://debian-administration.org/article/317/An_introduction_to_bash_completion_part_2
+
+# Fonction à utiliser
+_hizoprogress()
+{
+    # Création locale des variables
+    local cur prev opts
+
+    # Remplissage des variables
+    cur="${COMP_WORDS[COMP_CWORD]}" # Mot actuel
+    prev="${COMP_WORDS[COMP_CWORD-1]}" # mot précédent
+
+    case "${prev}" in
+        # Propose des formats par défaut
+        "-o"|"--output")
+            COMPREPLY=( $(compgen -W "%b %n %t" -- ${cur}) )
+            return 0 ;;
+
+        # Propose les arguments disponibles
+        *)
+            # Variable contenant les textes à renvoyer
+            COMPREPLY=( $(compgen -W "-? --help -b --body -e --examples -d --debug -h --head -l --limit -L --lang -o --output -of --output-finish -p --progress -q --quiet -r --remainder -R --reverse -s --space -v --version" -- ${cur}) )
+            return 0 ;;
+    esac
+}
+
+# Lie la fonction à la commande
+complete -F _hizoprogress hizoprogress

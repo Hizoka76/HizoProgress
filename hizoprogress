@@ -1,0 +1,1648 @@
+#!/bin/bash
+
+#################################### FR ##########################################
+##                                                                              ##
+## hizoprogress crée une barre de progression qui est complètement paramétrable ##
+##                                                                              ##
+##  Créé en 2020 par Terence Belléguic (hizo@free.fr) sous licence GNU GPL v3   ##
+##                                                                              ##
+#################################### EN ##########################################
+##                                                                              ##
+##    hizoprogress makes it easy to create a fully customizable progress bar    ##
+##                                                                              ##
+## Created in 2020 by Terence Belléguic (hizo@free.fr) under licence GNU GPL v3 ##
+##                                                                              ##
+##################################################################################
+
+
+# proposer un mode -temp Num tmpfile
+# on lancerait la fonction en arriere plan, elle créerait toutes les barres dans le fichier temporaire
+# puis en lançant la commande en précisant le fichier temp, il n'y aurait plus qu'a charger la bonne ligne en fonction du pourcentage
+
+
+#######################################
+## Affichage de toutes les variables ##
+#######################################
+function DebugMsg
+{
+    echo -e "\n
+###############
+## ${Rouge}Debug mod${Unset} ##
+###############
+
+${Violet}Arguments et valeurs :${Unset}"
+
+    for ArgAndValue in "${DebugArg[@]}"
+    do
+        echo -e "\t${ArgAndValue}"
+    done
+
+    echo -e "\n${Violet}Variables :${Unset}"
+    for Variable in Remainder RemainderCut RemainderList RemainderProgress Barre1 Barre2 Body BodyCut BodyList BodyProgress ColumnRemainder ColumnBody ColumnBodyWithHead ColumnHead Head HeadCut HeadList Lang Licence Line LineRaw NbSpace Output OutputFinish Progress ProgressBar ProgressNumber Space SpaceAfter SpaceBefore TextAfter TextBefore TextCenter Version WidthBar WidthTotal
+    do
+        if [[ ${Variable} == RemainderProgress ]]; then Value="#${#RemainderProgress[*]} => ${RemainderProgress[*]}"
+        elif [[ ${Variable} == BodyProgress ]]; then Value="#${#BodyProgress[*]} => ${BodyProgress[*]}"
+        elif [[ ${Variable} == RemainderList ]]; then Value="#${#RemainderList[*]} => ${RemainderList[*]}"
+        elif [[ ${Variable} == BodyList ]]; then Value="#${#BodyList[*]} => ${BodyList[*]}"
+        elif [[ ${Variable} == HeadList ]]; then Value="#${#HeadList[*]} => ${HeadList[*]}"
+        else Value=${!Variable}; fi
+
+        echo -e "\tLa variable ${Orange}${Variable}${Unset} vaut : ${Bleu}${Value}${Unset}"
+    done
+}
+
+
+
+#####################################
+## Affichage de l'aide en fr et en ##
+#####################################
+function HelpMsg
+{
+    # Variables de coloration et de mise en page
+    Start="\\t$(tput setaf 1)"
+    Start2="\\t$(tput setaf 2)"
+
+    # Tableau des traductions
+    declare -Ag Texts
+
+    # Remplissage du tableau en fonction de la langue utilisée
+    if [[ ${Lang} == "fr" ]]
+    then
+        Texts["description"]="Description de la ligne de base :"
+        Texts["progress"]="Progression"
+        Texts["body"]="Corps de la barre"
+        Texts["head"]="Tête de la barre"
+        Texts["remainder"]="Reste"
+        Texts["options"]="Options :"
+        Texts["char"]="caractère(s)"
+        Texts["default"]="\t\t\t\t\tValeur par défaut :"
+        Texts["-b"]="Caractère(s) utilisé(s) pour le corps de la barre."
+        Texts["help06"]="Numéro de la couleur à utiliser pour le texte qui suit.\n\t\t\t\t\t\tAccepte une couleur de police et une couleur de fond : Police/Fond.\n\t\t\t\t\t\tUtiliser ? donnera une couleur aléatoire.\n\t\t\t\t\t\t%00 réinitialise les couleurs du texte qui suit."
+        Texts["-q"]="Cache les retours d'erreur."
+        Texts["-r"]="Caractère(s) restants, travail restant à faire."
+        Texts["-?"]="Affichage de cette aide."
+        Texts["lang"]="langue"
+        Texts["-L"]="Langue à utiliser entre fr et en."
+        Texts["int"]="entier"
+        Texts["-e"]="Affiche de nombreux exemples."
+        Texts["-p"]="Pourcentage (avec ou sans %) ou -, pour lire stdin, servant à faire progresser la barre."
+        Texts["-o"]="Formatage de l'affichage avant d'arriver à 100%."
+        Texts["-h"]="Caractère(s) de tête de la barre de progression.\n\t\t\t\t\tDisparaît arrivé à 100%."
+        Texts["-v"]="Version de la commande hizoprogress."
+        Texts["-R"]="Inverse le sens de progression de la barre."
+        Texts["-d"]="Mode debug."
+        Texts["-of"]="Formatage de l'affichage une fois arrivé à 100%."
+        Texts["-s"]="Permet d'ajouter ou de soustraire des espaces dans l'affichage de retour si celui-ci n'est pas optimal."
+        Texts["-l"]="Taille maximale de la ligne.\n\t\t\t\t\tAccepte un nombre de colonne ou un pourcentage."
+        Texts["variables"]="Variables internes :"
+        Texts["%p"]="Variable remplacée par la valeur, sur 3 chiffres, de la progression.\n\t\t\t\t\t%P ajoute le signe % au nombre."
+        Texts["colors"]="Numéro de la couleur à utiliser pour le texte qui suit.\n\t\t\t\t\tAccepte une couleur de police et une couleur de fond : %Police/Fond.\n\t\t\t\t\tUtiliser le caractère ? pour utiliser une couleur aléatoire.\n\t\t\t\t\tUtiliser %00 pour réinitialiser les couleurs du texte qui suit."
+        Texts["%b"]="La variable sera remplacée par la barre."
+        Texts["%b1"]="%1 représente la 1ere partie, donc le début, de la barre.\n\t\t\t\t\t%2 représente la 2ème partie, donc la fin, de la barre."
+        Texts["var_enable"]="\t\t\t\t\tL'option prend en charge les variables internes suivantes :"
+        Texts["%c"]="Centre le texte compris entre 2 %c.\n\t\t\t\t\tCe qui est avant sera au début de la barre.\n\t\t\t\t\tCe qui est après sera en fin de barre."
+        Texts["-e1"]="\t\t\t\t\t${Orange}1${Unset}) Exemples simples"
+        Texts["-e2"]="\t\t\t\t\t${Orange}2${Unset}) Exemples utilisant du texte"
+        Texts["-e3"]="\t\t\t\t\t${Orange}3${Unset}) Exemples utilisant des dessins"
+        Texts["-e4"]="\t\t\t\t\t${Orange}4${Unset}) Exemples utilisant une barre en 2 parties"
+        Texts["-e5"]="\t\t\t\t\t${Orange}5${Unset}) Exemples utilisant l'alternance de 2 dessins"
+        Texts["-e6"]="\t\t\t\t\t${Orange}6${Unset}) Exemples utilisant l'alternance de plusieurs dessins"
+
+    else
+        Texts["description"]="Description of the baseline:"
+        Texts["progress"]="Progress   "
+        Texts["body"]="Bar's body       "
+        Texts["head"]="Bar's head"
+        Texts["remainder"]="Remainder"
+        Texts["options"]="Options:"
+        Texts["char"]="character(s)"
+        Texts["default"]="\t\t\t\t\tDefault value:"
+        Texts["-b"]="Character(s) used to form the progress bar's body."
+        Texts["-q"]="Hides the error returns."
+        Texts["-r"]="Character remaining, work still to be done."
+        Texts["-?"]="Displays this help."
+        Texts["lang"]="language"
+        Texts["-L"]="Language to use beetwen fr and en."
+        Texts["int"]="integer"
+        Texts["-e"]="Displays a lot of example."
+        Texts["-p"]="Percentage (with or without %) or -, to read stdin, used to raise the bar."
+        Texts["-o"]="Display format before 100%."
+        Texts["-h"]="Character(s) used to form the progress bar's head.\n\t\t\t\t\tDisappears arrived at 100%."
+        Texts["-v"]="Command version of hizoprogress."
+        Texts["-R"]="Reverse the bar progressing."
+        Texts["-d"]="Debug mode."
+        Texts["-of"]="Display format for 100%."
+        Texts["-s"]="Allows to add or remove space in the width line to improve the visual."
+        Texts["-l"]="Line's width maximal.\n\t\t\t\t\tAllows a column's number or a pourcentage."
+        Texts["variables"]="Internal variables:"
+        Texts["%p"]="The variable will be replaced by the progress value, on 3 digits.\n\t\t\t\t\t%P adds the sign % to the number."
+        Texts["colors"]="Color's number to use for the following text.\n\t\t\t\t\tEnable a text color and a background color: Police/Fond.\n\t\t\t\t\tUse the ? character to have a random color.\n\t\t\t\t\tUse %00 to reset the colors of the following text."
+        Texts["%b"]="The variable will be replaced by the bar."
+        Texts["%b1"]="%1 represents the first bar's half, so it's the bar's start.\n\t\t\t\t\t%2 represents the second bar's half, so the bar's end."
+        Texts["var_enable"]="\t\t\t\t\tThis option allows the internal following variables:"
+        Texts["%c"]="Centers the text between the two %c.\n\t\t\t\t\tWhat's before will be at the beginning of the bar.\n\t\t\t\t\tWhat's after will be at the end of the bar."
+        Texts["-e1"]="\t\t\t\t\t${Orange}1${Unset}) Simple examples"
+        Texts["-e2"]="\t\t\t\t\t${Orange}2${Unset}) Examples using text"
+        Texts["-e3"]="\t\t\t\t\t${Orange}3${Unset}) Examples using drawings"
+        Texts["-e4"]="\t\t\t\t\t${Orange}4${Unset}) Examples using a two half bar"
+        Texts["-e5"]="\t\t\t\t\t${Orange}5${Unset}) Examples using alternating two drawings"
+        Texts["-e6"]="\t\t\t\t\t${Orange}6${Unset}) Examples using alternating multiple drawings"
+    fi
+
+    # Affichage de l'aide sur stderr
+    echo -e "\n${Violet}${Texts["description"]}${Unset}
+[${Orange}050%${Unset}]           [${Bleu}=========================${Rouge}>${Jaune}_________________________________${Unset}]
+ ^ ${Orange}${Texts["progress"]}${Unset}    ^ ${Bleu}${Texts["body"]}${Unset}      ^ ${Rouge}${Texts["head"]}${Unset}     ^ ${Jaune}${Texts["remainder"]}${Unset}
+
+
+${Violet}${Texts["options"]}${Unset}
+${Start}-?, --help${Unset}\t\t\t${Texts["-?"]}
+
+${Start}-b, --body${Orange} ${Texts["char"]}${Unset}\t\t${Texts["-b"]}
+${Texts["var_enable"]} ${Vert}%p${Unset} / ${Vert}%P${Unset} / ${Vert}%c${Unset} / ${Vert}%?${Unset} / ${Vert}%[0-9]${Unset}
+${Texts["default"]} ${Bleu}%4=${Unset}
+
+${Start}-d, --debug${Unset}\t\t\t${Texts["-d"]}
+
+${Start}-e, --examples${Orange} ${Texts["int"]}${Unset}\t\t${Texts["-e"]}
+${Texts["-e1"]}
+${Texts["-e2"]}
+${Texts["-e3"]}
+${Texts["-e4"]}
+${Texts["-e5"]}
+
+${Start}-h, --head${Orange} ${Texts["char"]}${Unset}\t\t${Texts["-h"]}
+${Texts["var_enable"]} ${Vert}%p${Unset} / ${Vert}%P${Unset} / ${Vert}%?${Unset} / ${Vert}%[0-9]${Unset}
+${Texts["default"]} ${Bleu}%1>${Unset}
+
+${Start}-l, --limit${Orange} ${Texts["int"]}(%)${Unset}\t\t${Texts["-l"]}
+${Texts["default"]} ${Bleu}\$(tput cols) - 1${Unset}
+
+${Start}-L, --lang${Orange} ${Texts["lang"]}${Unset}\t\t${Texts["-L"]}
+${Texts["default"]} ${Bleu}\${LANG}${Unset}
+
+${Start}-o, --output${Unset}\t\t\t${Texts["-o"]}
+${Texts["var_enable"]} ${Vert}%p${Unset} / ${Vert}%P${Unset} / ${Vert}%c${Unset} / ${Vert}%?${Unset} / ${Vert}%[0-9]${Unset}
+${Texts["default"]} ${Bleu}[%P] [%b]${Unset}
+
+${Start}-of, --output-finish${Unset}\t\t${Texts["-of"]}
+${Texts["var_enable"]} ${Vert}%p${Unset} / ${Vert}%P${Unset} / ${Vert}%c${Unset} / ${Vert}%?${Unset} / ${Vert}%[0-9]${Unset}
+
+${Start}-p, --progress${Orange} ${Texts["int"]}${Unset}\t\t${Texts["-p"]}
+${Texts["default"]} ${Bleu}-${Unset}
+
+${Start}-q, --quiet${Unset}\t\t\t${Texts["-q"]}
+
+${Start}-r, --remainder${Orange} ${Texts["char"]}${Unset}\t${Texts["-r"]}
+${Texts["var_enable"]} ${Vert}%p${Unset} / ${Vert}%P${Unset} / ${Vert}%c${Unset} / ${Vert}%?${Unset} / ${Vert}%[0-9]${Unset}
+${Texts["default"]} ${Bleu}%3" "${Unset}
+
+${Start}-R, --reverse${Unset}\t\t\t${Texts["-R"]}
+
+${Start}-s, --space${Unset}\t\t\t${Texts["-s"]}
+
+${Start}-v, --version${Unset}\t\t\t${Texts["-v"]}
+
+
+${Violet}${Texts["variables"]}${Unset}
+${Start2}%b${Unset} (bar)\t\t\t${Texts["%b"]}
+
+${Start2}%b1/%b2${Unset} (half bar)\t\t${Texts["%b1"]}
+
+${Start2}%c${Unset} (bar text)\t\t\t${Texts["%c"]}
+
+${Start2}%p/%P${Unset} (progress)\t\t${Texts["%p"]}
+
+${Start2}%[0-9]*/%?${Unset} (color)\t\t${Texts["colors"]}" >&2
+
+
+    # Sortie du soft en mode normal
+    exit 0
+}
+
+
+
+#################################################
+## Affichage des messages d'erreur en fr et en ##
+#################################################
+function ErrorMsg
+{
+    # $1 : Message à afficher en mode normal, le mode quiet le cache
+    # $2 et $3 : Précision pour le message d'erreur
+
+    # Mode normal
+    if [[ -z ${Quiet} ]]
+    then
+        # Tableau des traductions
+        declare -Ag Texts
+
+        # Remplissage du tableau en fonction de la langue utilisée
+        if [[ ${Lang} == "fr" ]]
+        then
+            Texts["arg_colors"]="Les couleurs sont définies par un nombre entre 0 et 255."
+            Texts["arg_multi_bar"]="L'argument -o ne peut avoir qu'un seul %b."
+            Texts["arg_needs_value"]="L'argument ${2} nécessite une valeur."
+            Texts["arg_needs_number"]="L'argument ${2} nécessite une valeur numéraire."
+            Texts["arg_needs_progress"]="Le pourcentage de progression est obligatoire."
+            Texts["arg_not_needs_value"]="L'argument ${2} n'accepte pas de valeur alors que vous avez indiqué ${3} !"
+            Texts["arg_unknow"]="L'argument ${2} est inconnu. Pour voir les arguments valides, utiliser --help."
+            Texts["input_number"]="La valeur de l'argument -p doit être un nombre ! Vous avez indiqué : ${2}"
+            Texts["input_number_max"]="La valeur de l'argument -p ne peut pas dépasser 100% !"
+            Texts["input_number_min"]="La valeur de l'argument -p ne peut pas être inférieure à 0% !"
+            Texts["need_more_space"]="La ligne n'est pas assez grande pour afficher les éléments de base !"
+            Texts["no_txt_to_center"]="Aucun texte à centrer !"
+
+        else
+            Texts["arg_colors"]="The colors are define by a number between 0 and 255."
+            Texts["arg_multi_bar"]="The -o can have only one %b."
+            Texts["arg_needs_value"]="The ${2} argument needs a value."
+            Texts["arg_needs_number"]="The ${2} argument needs a int value."
+            Texts["arg_needs_progress"]="The progress percentage is mandatory."
+            Texts["arg_not_needs_value"]="The ${2} argument doesn't accept value but you have specified ${3}!"
+            Texts["arg_unknow"]="The ${2} argument is unknow. To view the valid arguments, use --help."
+            Texts["input_number"]="The value of the -p argument must be a number!"
+            Texts["input_number_max"]="The value of the -p argument can not be greater than 100%!"
+            Texts["input_number_min"]="The value of the -p argument can not be less than 0%!"
+            Texts["need_more_space"]="The line is not large enough to display the basic elements!"
+            Texts["no_txt_to_center"]="No text to center!"
+        fi
+
+        # Clé en mode mini pour eviter les fautes de programmation
+        Key=${1,,}
+
+        # Affichage de l'erreur sur stderr
+        echo -e "$(tput setaf 1)${Texts[${Key}]}$(tput sgr0)" >&2
+    fi
+
+    # Mode Debug
+    [[ ${Debug} ]] && DebugMsg
+
+    # Sortie du soft en mode erreur
+    exit 1
+}
+
+
+
+############################
+## Affichage des exemples ##
+############################
+function ExampleMsg
+{
+# Evite d'interpreter certains codes dans le here-doc
+set +H
+
+# $1 : Partie à afficher
+
+# Variables de boucle évitant les répétitions
+for1="${Gris}for x in {0..100}
+do${Unset} \n    "
+
+for2="\n    ${Gris}sleep 0.1
+done${Unset} "
+
+# Variables des options pour plus de clarté
+b="${Orange}-b${Unset}"
+h="${Orange}-h${Unset}"
+l="${Orange}-l${Unset}"
+o="${Orange}-o${Unset}"
+of="${Orange}-of${Unset}"
+p="${Orange}-p${Unset}"
+r="${Orange}-r${Unset}"
+R="${Orange}-R${Unset}"
+
+# Variable encadrant les titres
+Separator='------------------------------------------------------------------------'
+
+# Tableau des traductions
+declare -Ag Texts
+
+# Remplissage du tableau en fonction de la langue utilisée
+if [[ ${Lang} == "fr" ]]
+then
+    Texts["i01"]="Avant de commencer"
+    Texts["i02"]="La coloration des barres est respectée, c'est donc le vrai visuel (sauf erreur...)."
+    Texts["i03"]="Les options sont colorées en ${Orange}orange${Unset} et leurs valeurs sont colorées en ${Violet}violet${Unset}."
+    Texts["i04"]="Afin de faciliter la lecture des valeurs des options ${Orange}-o${Unset} et ${Orange}-of${Unset}, le texte est mis en ${Blanc}blanc${Unset}, les variables internes en ${Violet}violet${Unset} et les couleurs en ${Bleu}bleu${Unset}."
+    Texts["i05"]="Pour faciliter l'affichage des barres dans cette aide, elles sont souvent limitées à 100 colonnes."
+
+else
+    Texts["i01"]="Before you start"
+    Texts["i02"]="The coloring of the bars is respected, so this is the true visual..."
+    Texts["i03"]="The options are colored in ${Orange}orange${Unset} and their values are colored in ${Violet}violet${Unset}."
+    Texts["i04"]="To make the values of the ${Orange}-o${Unset} and ${Orange}-of${Unset} options easier to read, the text is set to ${Blanc}white${Unset}, the internal variables to ${Violet}violet${Unset}, and the colors to ${Bleu}blue${Unset}."
+    Texts["i05"]="To make it easier to display the bars in this help, they are often limited to 100 columns."
+fi
+
+
+Intro="${Cyan}${Separator:0:$((${#Texts["i01"]} + 8))}
+--- ${Texts["i01"]} ---
+${Separator:0:$((${#Texts["i01"]} + 8))}${Unset}
+${Texts["i02"]}
+
+${Texts["i03"]}
+
+${Texts["i04"]}
+
+${Texts["i05"]}"
+
+case ${1:-vide} in
+    1)
+        # Remplissage du tableau en fonction de la langue utilisée
+        if [[ ${Lang} == "fr" ]]
+        then
+            Texts["01"]="Exemples simples"
+            Texts["02"]="Version de base"
+            Texts["03"]="Version épileptique"
+            Texts["03a"]="Seules les couleurs sont modifiées, mais leur multiplication rend le code peu agréable..."
+            Texts["04"]="Version de base légèrement modifiée"
+            Texts["04a"]="Le corps et la tête de la barre ont été modifiés."
+            Texts["05"]="Progression mobile"
+            Texts["05a"]="La tête et le corps de la barre ont été modifiés ainsi que les affichages (< 100% et 100%)."
+            Texts["06"]="Remplissage d'une barre"
+            Texts["07"]="Effet dégradé"
+            Texts["07a"]="Le printf va créer une succession de > avec une couleur de 17 à 21 puis de 21 à 17 pour réaliser un dégradé."
+
+        else
+            Texts["01"]="Simple examples"
+            Texts["02"]="Basic version"
+            Texts["03"]="Epileptic version"
+            Texts["03a"]="Only the colors are changed, but their multiplication makes the code unpleasant..."
+            Texts["04"]="Slightly modified basic version"
+            Texts["04a"]="The body and the head of the bar have been modified."
+            Texts["05"]="Moving progression"
+            Texts["05a"]="The head and body of the bar have been changed as well as the displays (< 100% and 100%)."
+            Texts["06"]="Filling a bar"
+            Texts["07"]="Gradient effect"
+            Texts["07a"]="The printf will create a succession of > with a color from 17 to 21 and then from 21 to 17 to create a gradient."
+        fi
+
+        Examples=$(cat <<FIN
+
+${Intro}
+
+
+${Cyan}${Separator:0:$((${#Texts["01"]} + 8))}
+--- ${Texts["01"]} ---
+${Separator:0:$((${#Texts["01"]} + 8))}${Unset}
+
+${Vert}${Separator:0:$((${#Texts["02"]} + 4))}
+- ${Texts["02"]} -
+${Separator:0:$((${#Texts["02"]} + 4))}${Unset}
+[000%] [                                                                                          ]
+[050%] [${Bleu}============================================${Rouge}>${Unset}                                             ]
+[100%] [${Bleu}==========================================================================================${Unset}]
+
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["03"]} + 4))}
+- ${Texts["03"]} -
+${Separator:0:$((${#Texts["03"]} + 4))}${Unset}
+${BackOrange}${Vert}[${BackViolet}${Orange}000%${Unset}${BackOrange}${Vert}]${Unset} ${BackNoir}${Jaune}[${Bleu}${BackRouge}                                                                                          ${Unset}${BackBleu}${Vert}]${Unset}
+${Noir}${BackBleu}[${BackBlanc}${Rouge}050%${Unset}${Noir}${BackBleu}]${Unset} ${BackOrange}${Vert}[${BackViolet}${Blanc}============================================${BackVert}${Noir}>${Unset}                                             ${Unset}${Noir}${BackOrange}]${Unset}
+${BackNoir}${Jaune}[${BackRouge}${Blanc}100%${Unset}${BackNoir}${Jaune}]${Unset} ${Noir}${BackBleu}[${BackBleu}${Noir}==========================================================================================${Unset}${BackOrange}${Jaune}]${Unset}
+${Texts["03a"]}
+
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${o} "${Bleu}%?/?${Unset}[${Bleu}%?/?${Violet}%P${Bleu}%?/?${Unset}]${Bleu}%00 %?/?${Unset}[${Violet}%b${Bleu}%?/?${Unset}]" ${b} "${Bleu}%?/?${Violet}=${Unset}" ${h} "${Bleu}%?/?${Violet}>${Unset}" ${r} "${Bleu}%?/?${Violet} ${Unset}" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["04"]} + 4))}
+- ${Texts["04"]} -
+${Separator:0:$((${#Texts["04"]} + 4))}${Unset}
+[000%] [                                                                                          ]
+[050%] [${Bleu}- - - - - - - - - - - - - - - - - - - - - -${Rouge}~>${Unset}                                             ]
+[100%] [${Bleu}- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ${Unset}]
+${Texts["04a"]}
+
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Bleu}%4${Violet}- ${Unset}" ${h} "${Bleu}%1${Violet}~>${Unset}" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["05"]} + 4))}
+- ${Texts["05"]} -
+${Separator:0:$((${#Texts["05"]} + 4))}${Unset}
+[             ${Rouge}<020%>${Unset}                                                                               ]
+[                                                                        ${Rouge}<080%>${Unset}                    ]
+[                                              ${Rouge}<100%>${Unset}                                              ]
+${Texts["05a"]}
+
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} " " ${h} "${Bleu}%1${Violet}<%P>${Unset}" ${r} " " ${o} "${Violet}[%b]${Unset}" ${of} "[${Violet}%b1${Bleu}%1${Unset}<${Violet}%P${Unset}>${Bleu}%00${Violet}%b2${Unset}]" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["06"]} + 4))}
+- ${Texts["06"]} -
+${Separator:0:$((${#Texts["06"]} + 4))}${Unset}
+░▒▓                                                                                              ▓▒░
+░▒▓███████████████████████████████████████████████                                               ▓▒░
+░▒▓██████████████████████████████████████████████████████████████████████████████████████████████▓▒░
+
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Bleu}%7${Violet}█${Unset}" ${h} "" ${r} "${Bleu}%7 ${Unset}" ${o} "░▒▓${Violet}%b${Unset}▓▒░" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["07"]} + 4))}
+- ${Texts["07"]} -
+${Separator:0:$((${#Texts["07"]} + 4))}${Unset}
+[050%] [\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>                                              ${Unset}]
+[100%] [\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>\e[38;5;18m>\e[38;5;19m>\e[38;5;20m>\e[38;5;21m>\e[38;5;21m>\e[38;5;20m>\e[38;5;19m>\e[38;5;18m>\e[38;5;17m>\e[38;5;17m>${Unset}]
+${Texts["07a"]}
+
+printf -v body "${Bleu}%%${Violet}%s${Jaune}>${Unset}" {17..21} {21..17}
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Violet}\${body}${Unset}" ${h} ${l} "${Violet}100${Unset}" ${for2}
+FIN
+) ;;
+
+
+    2)
+        # Remplissage du tableau en fonction de la langue utilisée
+        if [[ ${Lang} == "fr" ]]
+        then
+            Texts["01"]="Exemples utilisant du texte"
+            Texts["02a"]="Le corps et les caractères devant ont été remplacés par du texte."
+            Texts["03"]="Merci de patienter"
+            Texts["03a"]="Le corps et les caractères devant ont été remplacés par un même texte."
+            Texts["03b"]="Le texte est le même dans le corps et le devant afin que seule la couleur change."
+            Texts["03c"]="Arrivé à 100%, le texte change et on utilise %c pour le centrer."
+            Texts["05"]="Barre simple avec changement de couleur de la progression"
+            Texts["05a"]="Utilisation de %c pour centrer le texte. Il est important de noter que la coloration est avant le %c."
+            Texts["05b"]="On utilise les couleurs afin de faire varier l'affichage entre les corps de la barre et les caractères à venir."
+            Texts["06"]="Messages centraux traversés par la tête de la barre"
+            Texts["07"]="Messages centraux sans barre"
+            Texts["08"]="Barre sans fin"
+
+        else
+            Texts["01"]="Examples Using Text"
+            Texts["02a"]="The body and the ahead characters have been replaced by text."
+            Texts["03"]="Please hold"
+            Texts["03a"]="The body and the ahead characters have been replaced by the same text."
+            Texts["03b"]="The text is the same in the body and ahead so that only the color changes."
+            Texts["03c"]="At 100%, the text changes and %c is used to center it."
+            Texts["05"]="Single bar with progression color change"
+            Texts["05a"]="Use %c to center text. It is important to note that the coloring is before the %c."
+            Texts["05b"]="Using colors to vary the display between the bar sizes and the characters to come."
+            Texts["06"]="Central messages traversed by the head of the bar"
+            Texts["07"]="Bar-less central messages"
+            Texts["08"]="Endless bar"
+        fi
+
+        Examples=$(cat <<FIN
+
+${Intro}
+
+
+${Cyan}${Separator:0:$((${#Texts["01"]} + 8))}
+--- ${Texts["01"]} ---
+${Separator:0:$((${#Texts["01"]} + 8))}${Unset}
+
+${Vert}-----------------
+- To do => Done -
+-----------------${Unset}
+[000%] [${Orange}to do to do to do to do to do to do to do to do to do to do to do to do to do to do to do${Unset}]
+[068%] [${Bleu}done done done done done done done done done done done done ${Orange}to do to do to do to do to do${Unset}]
+[100%] [${Bleu}done done done done done done done done done done done done done done done done done done${Unset}]
+${Texts["02a"]}
+
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Bleu}%3${Violet}done ${Unset}" ${h} " " ${r} "${Bleu}%4${Violet}to do ${Unset}" ${l} "${Violet}98${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["03"]} + 4))}
+- ${Texts["03"]} -
+${Separator:0:$((${#Texts["03"]} + 4))}${Unset}
+[${Violet}000%${Unset}] : [${Orange}Please wait pending the process in progress...${Unset}]
+[${Violet}048%${Unset}] : [${Bleu}Please wait pending the ${Orange}process in progress...${Unset}]
+[${Violet}100%${Unset}] : [           ${Bleu}Thank you for waiting :)${Unset}           ]
+${Texts["03a"]}
+${Texts["03b"]}
+${Texts["03c"]}
+
+${for1}[[ \${x} -eq 100 ]] && Text="${Jaune}%c${Violet}Thank you for waiting :)${Jaune}%c${Unset}" || Text="${Violet}Please wait pending the process in progress...${Unset}"
+    hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Bleu}%4${Violet}\${Text}${Unset}" ${h} "" ${r} "${Bleu}%3${Violet}\${Text}${Unset}" ${o} "[${Bleu}%5${Violet}%P${Bleu}%00${Unset}] [${Violet}%b${Unset}]" ${l} "${Violet}55${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["05"]} + 4))}
+- ${Texts["05"]} -
+${Separator:0:$((${#Texts["05"]} + 4))}${Unset}
+                                               000%
+${BackBlanc}${Noir}                                               05${Unset}0%
+${BackBlanc}${Noir}                                               100%                                               ${Unset}
+${Texts["05a"]}
+${Texts["05b"]}
+
+${for1}printf -v Progress "%03d" \${x}
+    hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Bleu}%0/7${Violet}${Jaune}%c${Violet}\${Progress}%${Jaune}%c${Unset}" ${h} "" ${r} "${Bleu}%7/0${Violet}${Jaune}%c${Violet}\${Progress}%${Jaune}%c${Unset}" ${o} "${Violet}%b${Unset}" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["06"]} + 4))}
+- ${Texts["06"]} -
+${Separator:0:$((${#Texts["06"]} + 4))}${Unset}
+[012%] [       ${Bleu}>${Blanc}>${Rouge}>${Unset}                            Process started                                      ]
+[023%] [                 ${Bleu}>${Blanc}>${Rouge}>${Unset}                Process in progress                                    ]
+[052%] [                                   Process h${Bleu}>${Blanc}>${Rouge}>${Unset} finished                                   ]
+[075%] [                                   Process soon finished         ${Bleu}>${Blanc}>${Rouge}>${Unset}                       ]
+[100%] [                                     Process completed                                     ]
+
+${for1}if [[ \${x} -eq 100 ]]; then txt="Process completed"
+    elif [[ \${x} -ge 70 ]]; then txt="Process soon finished"
+    elif [[ \${x} -ge 50 ]]; then txt="Process half finished"
+    elif [[ \${x} -ge 20 ]]; then txt="Process in progress"
+    elif [[ \${x} -ge 0 ]]; then txt="Process started"
+    fi
+    hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Violet}${Jaune}%c${Violet}\${txt}${Jaune}%c${Unset}" ${h} "${Bleu}%4${Violet}>${Bleu}%7${Violet}>${Bleu}%1${Violet}>${Unset}" ${r} "${Jaune}%c${Violet}\${txt}${Jaune}%c${Unset}" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["07"]} + 4))}
+- ${Texts["07"]} -
+${Separator:0:$((${#Texts["07"]} + 4))}${Unset}
+                     [${Violet}007%${Unset}]-[${Bleu}Process started${Unset}]
+                   [${Violet}023%${Unset}]-[${Bleu}Process in progress${Unset}]
+                  [${Violet}052%${Unset}]-[${Bleu}Process half finished${Unset}]
+                  [${Violet}073%${Unset}]-[${Bleu}Process soon finished${Unset}]
+                    [${Violet}100%${Unset}]-[${Bleu}Process completed${Unset}]
+
+${for1}if [[ \${x} -eq 100 ]]; then txt="Process completed"
+    elif [[ \${x} -ge 70 ]]; then txt="Process soon finished"
+    elif [[ \${x} -ge 50 ]]; then txt="Process half finished"
+    elif [[ \${x} -ge 20 ]]; then txt="Process in progress"
+    elif [[ \${x} -ge 0 ]]; then txt="Process started"
+    fi
+    hizoprogress -p "\${x}" -o "${Jaune}%c${Unset}[${Bleu}%5${Violet}%P${Bleu}%00${Unset}]-[${Bleu}%4${Unset}\${txt}${Bleu}%00${Unset}]${Jaune}%c${Unset}" ${l} "100"
+    sleep 0.1
+done
+
+
+${Vert}${Separator:0:$((${#Texts["08"]} + 4))}
+- ${Texts["08"]} -
+${Separator:0:$((${#Texts["08"]} + 4))}${Unset}
+[           ${Rouge}<In progress>${Unset}                                                                          ]
+[                                                    ${Rouge}<In progress>${Unset}                                 ]
+[                                                                                   ${Rouge}<In progress>${Unset}  ]
+[  ${Rouge}<In progress>${Unset}                                                                                   ]
+[                           ${Rouge}<In progress>${Unset}                                                          ]
+
+x=16
+etat=up
+${Gris}while true
+do${Unset}
+    hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} " " ${h} "${Bleu}%1${Violet}<In progress>${Unset}" ${r} " " ${o} "[${Violet}%b${Unset}]" ${l} "${Violet}100${Unset}"
+    [[ \${x} -eq 99 ]] && etat="down"
+    [[ \${x} -eq 16 && \${etat} == "down" ]] && etat="up"
+    if [[ \${etat} == up ]]; then (( x++ ))
+    else (( x-- )); fi${for2}
+FIN
+) ;;
+
+
+    3)
+        # Remplissage du tableau en fonction de la langue utilisée
+        if [[ ${Lang} == "fr" ]]
+        then
+            Texts["01"]="Exemples utilisant des dessins"
+            Texts["01a"]="Ces dessins utilisant des caractères spéciaux, la largeur de la ligne peut rencontrer des soucis."
+            Texts["02"]="Une cigarette se consume"
+            Texts["03"]="Un escargot hypnotique trace sa route"
+            Texts["04"]="Et une injection, une !"
+            Texts["05"]="Les dangers de la vitesse automobile"
+            Texts["06"]="Le bon usage des snipers"
+            Texts["07"]="Messages centraux sans barre"
+            Texts["08"]="Barre sans fin"
+
+        else
+            Texts["01"]="Examples using drawings"
+            Texts["01a"]="Since these drawings use special characters, the line width may encounter problems."
+            Texts["02"]="A cigarette burns"
+            Texts["03"]="A hypnotic snail makes its way"
+            Texts["04"]="And one shot, one!"
+            Texts["05"]="The Dangers of speeding"
+            Texts["06"]="The proper use of snipers"
+            Texts["07"]="Bar-less central messages"
+            Texts["08"]="Endless bar"
+        fi
+
+        Examples=$(cat <<FIN
+
+${Intro}
+
+
+${Cyan}${Separator:0:$((${#Texts["07"]} + 8))}
+--- ${Texts["01"]} ---
+${Separator:0:$((${#Texts["01"]} + 8))}${Unset}
+${Texts["01a"]}
+
+${Vert}${Separator:0:$((${#Texts["02"]} + 4))}
+- ${Texts["02"]} -
+${Separator:0:$((${#Texts["02"]} + 4))}${Unset}
+${Orange}(__${Unset}010%${Orange}__((${Unset}_________________________________________________________________________________${Rouge}()~~~
+${Orange}(__${Unset}050%${Orange}__((${Unset}_____________________________________________${Rouge}()~~~
+${Orange}(__${Unset}100%${Orange}__((()${Unset}
+
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} " " ${r} "%7_" ${h} "${Bleu}%1${Violet}()~~~${Unset}" ${o} "${Bleu}%3${Unset}(__${Bleu}%7${Violet}%P${Bleu}%3${Unset}__((${Violet}%b${Unset}" ${of} "${Bleu}%3${Unset}(__${Bleu}%7${Violet}%P${Bleu}%3${Unset}__((()${Unset}" ${R} ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["03"]} + 4))}
+- ${Texts["03"]} -
+${Separator:0:$((${#Texts["03"]} + 4))}${Unset}
+[010%] [                                                                                 ${Rouge}‘${Unset}-${Vert}‘${Unset}_@_${Vert} __${Unset}]
+[050%] [                                             ${Orange}‘${Unset}-${Bleu}‘${Unset}_@_${Vert} ______________________________________${Unset}]
+[090%] [         ${Violet}‘${Unset}-${Orange}‘${Unset}_@_${Vert} __________________________________________________________________________${Unset}]
+
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Bleu}%22${Violet}_${Unset}" ${h} "${Bleu}%?${Violet}‘${Bleu}%?${Violet}-${Bleu}%?${Violet}‘${Bleu}%7${Violet}_@_ ${Unset}" ${R} ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["04"]} + 4))}
+- ${Texts["04"]} -
+${Separator:0:$((${#Texts["04"]} + 4))}${Unset}
+020% :            ┣─▇▇▇═─                                                                      (_!_)
+060% :                                               ┣─▇▇▇═─                                   (_!_)
+100% :                                                                                     ┣▇═─${Rouge}(_${Unset}!_)
+
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} " " ${r} " " ${h} "${Bleu}%7${Violet}┣─▇▇▇═─${Unset}" ${o} "${Violet}%P${Unset} : ${Violet}%b${Unset}(_"'!'"_)" ${of} "${Violet}%P${Unset} : ${Violet}%b${Unset}┣▇═─${Bleu}%1${Unset}(_"'!'"_)" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["05"]} + 4))}
+- ${Texts["05"]} -
+${Separator:0:$((${#Texts["05"]} + 4))}${Unset}
+\ō͡≡o˞̶                                                                       ▇▇ ${Vert}090m before car crash${Unset}
+                              \ō͡≡o˞̶                                         ▇▇ ${Vert}050m before car crash${Unset}
+                                                                         ō͡\|o▓▓ ${Vert}Car crashed, no survivor${Unset}
+
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} " " ${h} "${Violet}\ō͡≡o˞̶${Unset}"  ${o} "${Violet}%b${Unset} ▇▇${Bleu}%2${Unset} \$(printf "%03d" \$((100-\${x})))m before car crash  " ${of} "${Violet}%b ${Unset}ō͡\|o▓▓  ${Bleu}%2${Unset}Car crashed, no survivor" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["06"]} + 4))}
+- ${Texts["06"]} -
+${Separator:0:$((${#Texts["06"]} + 4))}${Unset}
+︻┳デ═—     ◉                                                       (*) ${Orange}090m before target destruction${Unset}
+︻┳デ═—                             ◉                               (*) ${Orange}050m before target destruction${Unset}
+︻┳デ═—                                                              † ${Rouge}Target destroyed${Unset}
+
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} " " ${h} "${Violet}◉${Unset}" ${o} "︻┳デ═—${Violet}%b${Unset}(*)${Bleu}%3${Unset} \$(printf "%03d" \$((100-\${x})))m before target destruction" ${of} "︻┳デ═—${Violet}%b${Unset}† ${Bleu}%1${Unset}Target destroyed               " ${l} "${Violet}100${Unset}"${for2}
+FIN
+) ;;
+
+
+    4)
+        # Remplissage du tableau en fonction de la langue utilisée
+        if [[ ${Lang} == "fr" ]]
+        then
+            Texts["01"]="Exemples utilisant une barre en 2 parties"
+            Texts["02"]="Affichage d'un texte changeant en fonction de la progression entre les 2 barres"
+            Texts["02a"]="Necessite que tous les textes soit soit impairs soit pair."
+            Texts["04"]="Et une injection, une !"
+            Texts["05"]="Les dangers de la vitesse automobile"
+            Texts["06"]="Le bon usage des snipers"
+            Texts["07"]="Messages centraux sans barre"
+            Texts["08"]="Barre sans fin"
+
+        else
+            Texts["01"]="Examples using drawings"
+            Texts["01a"]="Since these drawings use special characters, the line width may encounter problems."
+            Texts["02"]="A cigarette burns"
+            Texts["03"]="A hypnotic snail makes its way"
+            Texts["04"]="And one shot, one!"
+            Texts["05"]="The Dangers of speeding"
+            Texts["06"]="The proper use of snipers"
+            Texts["07"]="Bar-less central messages"
+            Texts["08"]="Endless bar"
+        fi
+
+        Examples=$(cat <<FIN
+
+${Intro}
+
+
+${Cyan}${Separator:0:$((${#Texts["01"]} + 8))}
+--- ${Texts["01"]} ---
+${Separator:0:$((${#Texts["01"]} + 8))}${Unset}
+
+${Vert}${Separator:0:$((${#Texts["02"]} + 4))}
+- ${Texts["02"]} -
+${Separator:0:$((${#Texts["02"]} + 4))}${Unset}
+<${Violet}013%${Unset}> ${Bleu}======${Bleu}>${Blanc}>${Rouge}>${Unset}                              Process started
+<${Violet}034%${Unset}> ${Bleu}=====================${Bleu}>${Blanc}>${Rouge}>${Unset}             Traitement en cours
+<${Violet}052%${Unset}> ${Bleu}=================================${Bleu}>${Blanc}>${Unset} Process half finished ${Rouge}>${Unset}
+<${Violet}074%${Unset}> ${Bleu}===================================${Unset} Process soon finished ${Bleu}=============${Bleu}>${Blanc}>${Rouge}>${Unset}
+<${Violet}100%${Unset}> ${Bleu}=====================================${Unset} Process completed ${Bleu}=====================================${Unset}
+${Texts["02a"]}
+
+${for1}if [[ \${x} -eq 100 ]]; then txt="Process completed"
+    elif [[ \${x} -ge 70 ]]; then txt="Process soon finished"
+    elif [[ \${x} -ge 50 ]]; then txt="Process half finished"
+    elif [[ \${x} -ge 20 ]]; then txt="Process in progress"
+    elif [[ \${x} -ge 0 ]]; then txt="Process started"
+    fi
+    hizoprogress ${p} "${Violet}\${x}${Unset}" ${o} "<${Bleu}%5${Violet}%P${Bleu}%00${Unset}> ${Violet}%b1${Unset} \${txt} ${Violet}%b2${Unset}" ${h} "${Bleu}%4${Violet}>${Bleu}%7>${Bleu}%1>${Unset}" ${l} "${Violet}100${Unset}"${for2}
+FIN
+) ;;
+
+
+    5)
+        # Remplissage du tableau en fonction de la langue utilisée
+        if [[ ${Lang} == "fr" ]]
+        then
+            Texts["01"]="Exemples utilisant l'alternance de 2 dessins"
+            Texts["01a"]="Ces animations utilisent une liste de 2 éléments nommée Effect."
+            Texts["01b"]="Attention, l'effet visuel ne sera agréable que si tous les nombres sont envoyé."
+            Texts["02"]="C'est l'heure de récolter le blé"
+            Texts["03"]="Pacman mange et fait de petites crottes"
+            Texts["04"]="Kaneda se ballade dans Néo Tokyo"
+
+        else
+            Texts["01"]="Examples using the alteration of 2 drawings"
+            Texts["01a"]="These animations use a list of 2 items called Effect."
+            Texts["01b"]="Attention, the visual effect will only be pleasant if all the numbers are sent."
+            Texts["02"]="It's time to harvest the wheat"
+            Texts["03"]="Pacman eats and poops"
+            Texts["04"]="Kaneda rides in Neo Tokyo"
+        fi
+
+        Examples=$(cat <<FIN
+
+${Intro}
+
+
+${Cyan}${Separator:0:$((${#Texts["01"]} + 8))}
+--- ${Texts["01"]} ---
+${Separator:0:$((${#Texts["01"]} + 8))}${Unset}
+${Texts["01a"]}
+${Texts["01b"]}
+
+${Vert}${Separator:0:$((${#Texts["02"]} + 4))}
+- ${Texts["02"]} -
+${Separator:0:$((${#Texts["02"]} + 4))}${Unset}
+[000%] [${Jaune}||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||${Unset}]
+[050%] [${Jaune}____________________________________________${Rouge}x${Jaune}|||||||||||||||||||||||||||||||||||||||||||||${Unset}]
+[051%] [${Jaune}____________________________________________${Rouge}+${Jaune}|||||||||||||||||||||||||||||||||||||||||||||${Unset}]
+[100%] [${Jaune}__________________________________________________________________________________________${Unset}]
+
+Effect=(x +)
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Bleu}%11${Violet}_${Unset}" ${r} "${Bleu}%11${Violet}|${Unset}" ${h} "${Bleu}%7${Violet}\${Effect[\$((x % 2))]}${Unset}" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["03"]} + 4))}
+- ${Texts["03"]} -
+${Separator:0:$((${#Texts["03"]} + 4))}${Unset}
+[010%] [      ${Jaune}(°<${Unset}·················································································]
+[011%] [      ${Jaune}(°-${Unset}·················································································]
+[012%] [       ${Jaune}(°<${Unset}················································································]
+[013%] [     ${Orange}.${Unset}  ${Jaune}(°-${Unset}···············································································]
+
+Effect=("(°<" "(°-")
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Bleu}%3${Violet}     .${Unset}" ${r} "${Bleu}%7${Violet}·${Unset}" ${h} "${Bleu}%11${Violet}\${Effect[\$((x % 2))]}${Unset}" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["04"]} + 4))}
+- ${Texts["04"]} -
+${Separator:0:$((${#Texts["04"]} + 4))}${Unset}
+[012%] [${Rouge}(×)=/*-(×)${Unset}                                                                                ]
+[051%] [~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~${Rouge}(+)=/*-(+)${Unset}                                             ]
+[099%] [~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~${Rouge}(+)=/*-(+)${Unset} ]
+
+Effect=("(×)=/*-(×)" "(+)=/*-(+)")
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Bleu}%7${Violet}~${Unset}" ${h} "${Bleu}%1${Violet}\${Effect[\$((x % 2))]}${Unset}" ${l} "${Violet}100${Unset}"${for2}
+FIN
+) ;;
+
+
+    6)
+        # Remplissage du tableau en fonction de la langue utilisée
+        if [[ ${Lang} == "fr" ]]
+        then
+            Texts["01"]="Exemples utilisant l'alternance de plusieurs dessins"
+            Texts["01a"]="Ces animations utilisent une liste, devant avoir au moins 101 éléments, nommée Effect."
+            Texts["01b"]="Ces dessins seront lus les uns après les autres."
+            Texts["01c"]="Attention, l'effet visuel ne sera agréable que si tous les nombres sont envoyés, il ne faut pas sauter de valeur."
+            Texts["01d"]="Pour utiliser le caractère % dans printf, il faut le double : %%"
+            Texts["01e"]="Après de nombreux tests, la meilleure façon de faire serait :"
+            Texts["01f"]="Dans nos exemples, nous créons des listes de 104 éléments (4 * 26)."
+            Texts["02"]="L'invention de la roue"
+            Texts["03"]="Hyperspermie"
+            Texts["04"]="Non, la masturbation ne rend pas sourd"
+            Texts["05"]="Ça bouge sur le dancehall"
+
+        else
+            Texts["01"]="Examples using alteration of multiple drawings"
+            Texts["01a"]="These animations use a list, which must have at least 101 elements, called Effect."
+            Texts["01b"]="These drawings will be read one after the other."
+            Texts["01c"]="Warning, the visual effect will only be pleasant if all the numbers are sent, so don't skip any values."
+            Texts["01d"]="To use the % character in printf, double it: %%"
+            Texts["01e"]="After many tests, the best way would be:"
+            Texts["01f"]="In our examples, we create lists of 104 elements (4 * 26)."
+            Texts["02"]="The invention of the wheel"
+            Texts["03"]="Hyperspermia"
+            Texts["04"]="No, masturbation doesn't make you deaf"
+            Texts["05"]="It moves on the dancehall"
+        fi
+
+        Examples=$(cat <<FIN
+
+${Intro}
+
+
+${Cyan}${Separator:0:$((${#Texts["01"]} + 8))}
+--- ${Texts["01"]} ---
+${Separator:0:$((${#Texts["01"]} + 8))}${Unset}
+${Texts["01a"]}
+${Texts["01b"]}
+${Texts["01c"]}
+${Texts["01d"]}
+
+${Texts["01e"]}
+printf -v Effect 'a b c d %.s' {0..25}
+Effect=(\${Effect})
+${Texts["01f"]}
+
+${Vert}${Separator:0:$((${#Texts["02"]} + 4))}
+- ${Texts["02"]} -
+${Separator:0:$((${#Texts["02"]} + 4))}${Unset}
+000% : -
+001% : \ \n002% : |
+003% : /
+100% : -
+
+printf -v Effect -- '- \\\\\ | / %.s' {0..25}
+Effect=(\${Effect})
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${o} "${Violet}%P${Unset} : \${Effect[\${x}]//\\\\\/\\\\\\\\\\\\\\\}" ${of} "${Violet}%P${Unset} : -"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["03"]} + 4))}
+- ${Texts["03"]} -
+${Separator:0:$((${#Texts["03"]} + 4))}${Unset}
+${Violet}000%${Unset} : 8m==${Rouge}>${Unset}
+${Violet}001%${Unset} : 8=m=${Rouge}>${Unset}
+${Violet}002%${Unset} : 8==m${Rouge}>${Unset} ~
+${Violet}003%${Unset} : 8=m=${Rouge}>${Unset} ~~
+${Violet}004%${Unset} : 8m==${Rouge}>${Unset} ~~o
+${Violet}100%${Unset} : 8m==${Rouge}>${Unset} ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o ~~o
+
+printf -v Effect '8m==${Bleu}%%1${Unset}> 8=m=${Bleu}%%1${Unset}> 8==m${Bleu}%%1${Unset}> 8=m=${Bleu}%%1${Unset}> %.s' {0..25}
+Effect=(\${Effect})
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${b} "${Bleu}%7${Violet}~~o${Unset} " ${h} "" ${o} "${Bleu}%5${Violet}%P${Bleu}%00$Unset : \${Effect[\${x}]} ${Violet}%b${Unset}" ${l} "${Violet}100${Unset}"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["04"]} + 4))}
+- ${Texts["04"]} -
+${Separator:0:$((${#Texts["04"]} + 4))}${Unset}
+${Violet}000%${Unset} : 8m==${Rouge}>${Unset}
+${Violet}001%${Unset} : 8=m=${Rouge}>${Unset}
+${Violet}002%${Unset} : 8==m${Rouge}>${Unset}
+${Violet}003%${Unset} : 8=m=${Rouge}>${Unset}
+${Violet}100%${Unset} : 8m==${Rouge}>${Unset} ~~o ~~o ~~o
+
+printf -v Effect '8m==${Bleu}%%1${Unset}> 8=m=${Bleu}%%1${Unset}> 8==m${Bleu}%%1${Unset}> 8=m=${Bleu}%%1${Unset}> %.s' {0..25}
+Effect=(\${Effect})
+${for1}hizoprogress ${p} "${Violet}\${x}${Unset}" ${o} "${Bleu}%5${Violet}%P${Bleu}%00${Unset} : \${Effect[\${x}]}" ${of} "${Bleu}%5${Violet}%P${Bleu}%00${Unset} : 8=m=${Bleu}%1${Unset}>${Bleu}%00${Unset} ~~o ~~o ~~o"${for2}
+
+
+${Vert}${Separator:0:$((${#Texts["05"]} + 4))}
+- ${Texts["05"]} -
+${Separator:0:$((${#Texts["05"]} + 4))}${Unset}
+000% : ${Violet}♪${Unset}┏(°.°)┛${Gris}♪${Unset}
+001% : ${Jaune}♪${Unset}┗(°.°)┛${Cyan}♪${Unset}
+002% : ${Vert}♪${Unset}┗(°.°)┓${Orange}♪${Unset}
+003% : ${Rouge}♪${Unset}┏(°.°)┓${Violet}♪${Unset}
+
+Note="${Bleu}%%?${Unset}♪${Bleu}%%00${Unset}"
+printf -v Effect "\${Note}┏(°.°)┛\${Note} \${Note}┗(°.°)┛\${Note} \${Note}┗(°.°)┓\${Note} \${Note}┏(°.°)┓\${Note} %.s" {0..25}
+Effect=(\${Effect})
+${for1}hizoprogress -p "\${x}" ${o} "${Violet}%P${Unset} : \${Effect[\${x}]}" ${for2}
+FIN
+) ;;
+
+    *)
+        # Remplissage du tableau en fonction de la langue utilisée
+        if [[ ${Lang} == "fr" ]]
+        then
+            Texts["01"]="Il y a beaucoup d'exemples différents, pour plus de clarté, ils ont été regroupés par catégorie."
+            Texts["02"]="Merci de relancer la commande en précisant la catégorie à afficher :"
+            Texts["03"]="\t1) Exemples simples"
+            Texts["04"]="\t2) Exemples utilisant du texte"
+            Texts["05"]="\t3) Exemples utilisant des dessins"
+            Texts["06"]="\t4) Exemples utilisant une barre en 2 parties"
+            Texts["07"]="\t5) Exemples utilisant l'alternance de 2 dessins"
+            Texts["08"]="\t6) Exemples utilisant l'alternance de plusieurs dessins"
+
+        else
+            Texts["01"]="There are many different examples, for greater clarity they have been grouped by category."
+            Texts["02"]="Thank you to restart the command by specifying the category to be displayed:"
+            Texts["03"]="\t1) Simple examples"
+            Texts["04"]="\t2) Examples using text"
+            Texts["05"]="\t3) Examples using drawings"
+            Texts["06"]="\t4) Examples using a two half bar"
+            Texts["07"]="\t5) Examples using alternating two drawings"
+            Texts["08"]="\t6) Examples using alternating multiple drawings"
+        fi
+
+        echo -e "${Texts["01"]}\n${Texts["02"]}\n${Texts["03"]}\n${Texts["04"]}\n${Texts["05"]}\n${Texts["06"]}\n${Texts["07"]}\n${Texts["08"]}"
+esac
+
+    # Affichage
+    echo -e "${Examples}"
+
+    # Mode Debug
+    [[ ${Debug} ]] && DebugMsg
+
+    # Sortie du soft en mode erreur
+    exit 0
+}
+
+
+
+#####################################
+## Conversion d'un string en array ##
+#####################################
+function StringToArray
+{
+# Autres facons mais plus lentes
+#     i=${#1}; while ((i--))
+#     for character in ${1}
+#     for (($i; $i < ${#1}; i++))
+#     caca="${1}"; while [[ ${caca} ]]; do character="${caca:0:1}" caca="${caca:1}"
+#     while [[ $((i++)) -le ${#1} ]]
+
+    # $2 : Force la couleur pour chaque caractère
+
+    # Variables locales
+    local Color Signe character
+
+    # Réinitialisation variable globale
+    unset StringToArrayValue
+
+    # Dans le cas de head et de ahead, il faut répéter la couleur
+    # Head : si plusieurs caracteres, elle peut etre incomplète il faut donc connaitre la couleur de chaque caractère
+    # Ahed : On affiche depuis la fin alors que la couleur est au début
+    Color=""
+
+    # Sert à matcher tous les caractères
+    # [[ Bonjour =~ (.)(.)(.)(.)(.)(.)(.) ]]
+    [[ ${1} =~ ${1//?/(.)} ]]
+
+    # Traite tous les caractères, en fait tout ce qui a matché au dessus
+    for character in "${BASH_REMATCH[@]:1}"
+    do
+        # Si le caractère précédant était un %
+        if [[ ${Signe} ]]
+        then
+            # Si c'est un nombre ou un ? qui apparaît maintenant, c'est que c'est une couleur
+            if [[ ${character} == [0-9\?/] ]]
+            then
+                # Nouvelle couleur à utiliser
+                Signe+=${character}
+                [[ ${2} ]] && Color="${Signe}"
+
+            # Si ce n'était pas une couleur ou si elle est terminée, on ajoute le signe
+            else
+                # Si c'était une couleur ou que c'était une variable interne
+                [[ ${Signe:0:2} == %[0-9\?] || ${character} == [pPbahc] ]] && StringToArrayValue+=("${Signe}${character}") || StringToArrayValue+=("${Color}${Signe}" "${Color}${character}")
+
+                # Reinitilisation de la varible
+                Signe=""
+            fi
+
+            # On a déjà ajouter character, on passe à la suite
+            continue
+        fi
+
+        # Traite différement les %, les [0-9] (Ajoute un charactere invisible entre la couleur et le nombre) et les autres caractères
+        if [[ ${character} == '%' ]]; then Signe="%"
+        elif [[ ${character} == [0-9] ]]; then StringToArrayValue+=("${Color}‎${character}")
+        else StringToArrayValue+=("${Color}${character}"); fi
+
+    done
+
+    # Si on termine par du Signe, c'est soit une couleur soit juste le symbole ou %p...
+    if [[ ${Signe:0:2} == %[0-9]* ]]; then StringToArrayValue[-1]="${StringToArrayValue[-1]}${Color}${Signe}"
+    elif [[ $Signe ]]; then StringToArrayValue+=("${Color}${Signe}"); fi
+
+    # Il faut utiliser la variable StringToArrayValue créée ici après l'appel à la fonction
+}
+
+
+
+###########################################################
+## Suppression de toutes les variables couleurs internes ##
+###########################################################
+# Infimiment plus rapide que sed -r "s|%[0-9]+/[0-9]+||g" et sed -r "s|%[0-9]+||g"
+function ColorCleaning
+{
+    # Valeur à nettoyer
+    ColorCleaningValue="${1}"
+
+    # Nettoyage des couleurs possibles
+    for Match in "${Matchs[@]}"
+    do
+        [[ ${ColorCleaningValue} == *${Match}* ]] && ColorCleaningValue="${ColorCleaningValue//${Match//\/\/}}"
+    done
+
+    # Il faut utiliser la variable ColorCleaningValue créée ici après l'appel à la fonction
+}
+
+
+
+####################################
+## Gestion du centrage des textes ##
+####################################
+function TextCentering
+{
+    # Variables locales
+    local TextCenteringValue TextBeforeRaw TextAfterRaw TextCenterRaw
+
+    # Valeur à nettoyer
+    TextCenteringValue="${1}"
+
+    # Texte présent avant le 1er %c"
+    TextBefore="${TextCenteringValue%%%c*}"
+    ColorCleaning "${TextBefore}"
+    TextBeforeRaw="${ColorCleaningValue}"
+
+    # Texte après le 2e %c
+    TextAfter="${TextCenteringValue##*%c}"
+    ColorCleaning "${TextAfter}"
+    TextAfterRaw="${ColorCleaningValue}"
+
+    # Texte entre les 2 %c
+    TextCenter="${TextCenteringValue/#${TextBefore//\[/\\[}}"
+    TextCenter="${TextCenter/%${TextAfter//\[/\\[}}"
+    TextCenter="${TextCenter//%c}"
+
+    # Vérifie que TextCenter n'est pas vide, si c'et le cas, il n'y a rien à centrer ou il n'y a eu qu'un seul %c
+    [[ -z ${TextCenter} ]] && ErrorMsg no_txt_to_center
+
+    ColorCleaning "${TextCenter}"
+    TextCenterRaw="${ColorCleaningValue}"
+
+    # Taille de la barre - Taille du texte + 4 (2 x %c) + Taille du texte avant centrage + Taille du texte après centrage
+    SpaceBefore=$(((${WidthBar:-${WidthTotal}} - ${#TextCenterRaw} - ${#TextBeforeRaw} - ${#TextAfterRaw}) / 2))
+
+    # Nombre d'espace entre le 2éme %c et la fin, nouveau calcul si celui du dessus ne tombe pas juste
+    SpaceAfter=$((${WidthBar:-${WidthTotal}} - SpaceBefore - ${#TextCenterRaw} - ${#TextBeforeRaw} - ${#TextAfterRaw}))
+
+    # Il faut utiliser les différentes variables créées ici après l'appel à la fonction
+}
+
+
+
+###################################################
+## Création de barre remplie des éléments donnés ##
+###################################################
+function BarCreation
+{
+    # Vouloir éviter la répétition des couleurs augmente le temps de travail
+    # Vouloir limiter BarCreationValue à WidthMax éléments ne fait que rajouter du travail : BarCreationValue=("${BarCreationValue[@]:0:${WidthMax}}")
+
+    # Variables locales
+    local WidthMax BarList
+
+    # Taille max pour limiter la duplication d'éléments inutiles
+    WidthMax="${1}"
+
+    # Décale les arguments pour que $1 disparaisse
+    shift
+
+    # Liste contenant les differents element de la partie de la barre
+    BarList=("${@}")
+
+    # Création d'une barre remplie de Body, met le 1er élément pour être sûr qu'il y en ait au moins un si très long
+    BarCreationValue=("${@}")
+
+    # Vérifie que la liste n'est pas vide
+    if [[ ${#BarList[@]} -gt 0 ]]
+    then
+        # Remplissage de la variable contenant une barre entiere de l'élément
+        while [[ ${#BarCreationValue[@]} -lt ${WidthMax} ]]; do BarCreationValue+=("${BarList[@]}"); done
+    fi
+
+    # Il faut utiliser la variable BarCreationValue créée ici après l'appel à la fonction
+}
+
+
+
+###############
+## Variables ##
+###############
+### Version et licence du soft
+Version="2.0.0 - 25/04/2020"
+Licence="GNU GPL v3"
+
+### Valeurs par défaut
+Body="%4=" # Corps de la barre
+Head="%1>" # Tête de la barre
+Remainder="%3 " # Devant de la barre
+Lang=${LANG:0:2} Lang=${Lang,,} # Langue du système
+Space=0 # Adaptation de la taille de la ligne
+Output="[%P] [%b]" # Format de sortie
+LineRaw="${Output}"
+DebugArg=()
+
+# Utilise stdin par défaut
+test ! -t 0 && read Progress
+
+
+### Liste des arguments utilisés
+ArgList=("-?" "--help" "-b" "--body" "-e" "--examples" "-d" "--debug" "-h" "--head" "-l" "--limit" "-L" "--lang" "-o" "--output" "-of" "--output-finish" "-p" "--progress" "-q" "--quiet" "-r" "--remainder" "-R" "--reverse" "-s" "--space" "-v" "--version")
+
+
+### Sert au nettoyage de la ligne
+Clear=$(tput el)
+
+
+### Largeur du terminal
+WidthTotal=$(($(tput cols) - 1))
+
+
+### Couleurs internes en mode 256
+Noir="\033[38;5;0m"
+Rouge="\033[38;5;1m"
+Vert="\033[38;5;2m"
+Orange="\033[38;5;3m"
+Bleu="\033[38;5;4m"
+Violet="\033[38;5;5m"
+Cyan="\033[38;5;6m"
+Blanc="\033[38;5;7m"
+Gris="\033[38;5;8m"
+Jaune="\033[38;5;11m"
+
+BackNoir="\033[48;5;0m"
+BackRouge="\033[48;5;1m"
+BackVert="\033[48;5;2m"
+BackOrange="\033[48;5;3m"
+BackBleu="\033[48;5;4m"
+BackViolet="\033[48;5;5m"
+BackBlanc="\033[48;5;7m"
+
+Unset="\e[0m"
+
+
+# Liste des matchs recherchés
+REMatchs=("%([0-9][0-9][0-9])/([0-9][0-9][0-9])" "%([0-9][0-9][0-9])/([0-9][0-9])" "%([0-9][0-9][0-9])/([0-9])" "%([0-9][0-9])/([0-9][0-9][0-9])" "%([0-9][0-9])/([0-9][0-9])" "%([0-9][0-9])/([0-9])" "%([0-9])/([0-9][0-9][0-9])" "%([0-9])/([0-9][0-9])" "%([0-9])/([0-9])" "%([0-9][0-9][0-9])" "%([0-9][0-9])" "%([0-9])")
+Matchs=("%[0-9][0-9][0-9]/[0-9][0-9][0-9]" "%[0-9][0-9][0-9]/[0-9][0-9]" "%[0-9][0-9][0-9]/[0-9]" "%[0-9][0-9]/[0-9][0-9][0-9]" "%[0-9][0-9]/[0-9][0-9]" "%[0-9][0-9]/[0-9]" "%[0-9]/[0-9][0-9][0-9]" "%[0-9]/[0-9][0-9]" "%[0-9]/[0-9]" "%[0-9][0-9][0-9]" "%[0-9][0-9]" "%[0-9]")
+
+
+
+##############################
+## Traitement des arguments ##
+##############################
+# getopts ne sert qu'en cas d'utilisation de argument d'1 lettre et qu'on puisse les assembler, donc pas d’intérêt ici
+while [[ ${*} ]]
+do
+    ## Regarde si l'élément suivant est un argument ou une valeur
+    # vide ne remplacera $2 que s'il n'existe vraiment pas, pas juste parce que la valeur est vide
+    if [[ ${2-vide} != vide ]]
+    then
+        # Si l'élément commence par un -
+        if [[ ${2:0:1} == "-" ]]
+        then
+            # Vérifie que $2 n'est pas le nom d'un argument, teste si la liste contient exactement $2
+            [[ ${ArgList[*]} =~ (^|[[:space:]])${2}($|[[:space:]]) ]] && ArgOrVal="Argument" || ArgOrVal="Valeur"
+
+            # Si on veut permettre d'utiliser les arguments comme des valeurs si on les fait précéder d'une *
+            # ex : -b "*-h"
+            # [[ ${ArgList[@]/#/} =~ (^|[[:space:]])${2}($|[[:space:]]) ]] && set -- "${1}" "${2/#\*}" "${@:3}"
+
+        else
+            ArgOrVal="Valeur"
+        fi
+
+    else
+        ArgOrVal="Aucun"
+    fi
+
+    # case traitant les arguments et les valeurs
+
+    ## Teste l'argument actuel
+    case "${1}" in
+        # Affichage de l'aide
+        "-?"|"--help")
+            HelpMsg
+        ;;
+
+        # Caractère du corps de la barre de progression
+        "-b"|"--body")
+            # Reprise de la valeur indiquée même si vide ou destruction de la variable s'il n'y en a pas
+            [[ ${ArgOrVal} == "Valeur" ]] && Body="${2}" || unset Body
+        ;;
+
+        # Mode cachant les messages d'erreurs
+        "-d"|"--debug")
+            # Valeur impossible
+            [[ ${ArgOrVal} == "Valeur" ]] && ErrorMsg arg_not_needs_value "${1}" "${2}"
+            Debug=true
+        ;;
+
+        # Affichage des exemples
+        "-e"|"--examples")
+            ExampleMsg "${2}"
+        ;;
+
+        "-h"|"--head")
+            # Reprise de la valeur indiquée même si vide ou destruction de la variable s'il n'y en a pas
+            [[ ${ArgOrVal} == "Valeur" ]] && Head="${2}" || unset Head
+        ;;
+
+        # Langue à utiliser pour l'aide et les messages d'erreur
+        "-l"|"--limit")
+            # Valeur numéraire ou pourcentage obligatoire
+            [[ ${ArgOrVal} != "Valeur" || ! ${2} =~ ^[0-9]*%?$ ]] && ErrorMsg arg_needs_value "${1}"
+
+            [[ ${2} == +([0-9]) ]] &&  WidthTotal=${2} || WidthTotal=$(((WidthTotal * ${2//%}) /100))
+        ;;
+
+        # Langue à utiliser pour l'aide et les messages d'erreur
+        "-L"|"--lang")
+            # Reprise de la valeur indiquée même si vide
+            [[ ${ArgOrVal} == "Valeur" ]] && Lang="${2,,}"
+        ;;
+
+        # Formatage de sortie avant 100%
+        "-o"|"--output")
+            # Valeur obligatoire
+            [[ ${ArgOrVal} != "Valeur" || -z ${2} ]] && ErrorMsg arg_needs_value "${1}"
+
+            # Vérifie que le formatage de sortie ne contient qu'un seul %b ou 2 %b1/2
+            # Beaucup plus rapide que : grep -Eo "%b[^12]" <<< "${2}" | wc -l
+            # Si contient %b1 ou %b2
+            if [[ ${2} == *%b[12]* ]]
+            then
+                # On dégage le 1er %b1
+                tmp="${2/\%b1}"
+
+                # On recherche un %b une fois un %b2 dégagé
+                [[ ${tmp/\%b2} == *"%b"* ]] && ErrorMsg arg_multi_bar
+
+            # Si contient %b
+            elif [[ ${2} == *"%b"* ]]
+            then
+                # On recherche un %b une fois un %b dégagé
+                [[ ${2/\%b} == *"%b"* ]] && ErrorMsg arg_multi_bar
+            fi
+
+            Output="${2}"
+        ;;
+
+        # Formatage de sortie à 100%
+        "-of"|"--output-finish")
+            # Reprise de la valeur indiquée même si vide
+            OutputFinish="${2}"
+        ;;
+
+        # Valeur indiquant la progression
+        "-p"|"--progress")
+            # Valeur numéraire obligatoire
+            [[ ${ArgOrVal} != "Valeur" ]] && ErrorMsg arg_needs_number "${1}" "${2}"
+            [[ "${2}" != "-" ]] && Progress="${2}"
+        ;;
+
+        # Mode cachant les messages d'erreurs
+        "-q"|"--quiet")
+            # Valeur impossible
+            [[ ${ArgOrVal} == "Valeur" ]] && ErrorMsg arg_not_needs_value "${1}" "${2}"
+            Quiet=true
+        ;;
+
+        # Caractère au devant de la barre de progression
+        "-r"|"--remainder")
+            # Reprise de la valeur indiquée même si vide ou destruction de la variable s'il n'y en a pas
+            [[ ${ArgOrVal} == "Valeur" ]] && Remainder="${2}" || unset Remainder
+        ;;
+
+        # Mode inversant le sens de la barre de progression
+        "-R"|"--reverse")
+            # Valeur impossible
+            [[ ${ArgOrVal} == "Valeur" ]] && ErrorMsg arg_not_needs_value "${1}" "${2}"
+            Reverse=true
+        ;;
+
+        # Valeur ajustant la taille de la ligne
+        "-s"|"--space")
+            # Nettoyage de la valeur indiquée
+            Space="${2}"
+
+            # Suppression des espaces possibles
+            [[ ${Space} == " " ]] && Space="${Space// }"
+
+            # Suppression des 0 possibles de début
+            [[ ${Space:0:1} == "0" ]] && Space=$(( 10#${Space} ))
+
+            # Valeur numéraire obligatoire
+            [[ ${ArgOrVal} != "Valeur" || ! ${Space} =~ ^-?[0-9]*$ ]] && ErrorMsg arg_needs_number "${1}" "${2}"
+        ;;
+
+        # Version du soft
+        "-v"|"--version")
+            echo -e "HizoProgress version ${Version}.\n${Licence}." >&2
+
+            # Arrêt normal du soft
+            exit 0
+        ;;
+
+        *)
+            # Si un autre argument a été donné
+            ErrorMsg arg_unknow "${1}"
+        ;;
+    esac
+
+    # En cas d'utilisation du mode debug
+    [[ ${ArgOrVal} == "Valeur" ]] && Valeur=" avec pour valeur : ${Bleu}${2}${Unset}" || unset Valeur
+    DebugArg+=("Utilisation de l'argument ${Orange}${1}${Unset}${Valeur}.")
+
+    # On décale les arguments, ${1} est détruit, ${2} devient ${1}, ${3} devient ${2}...
+    # Si l'élément suivant est une valeur, on la saute car déjà utilisée par l'argument actuel
+    [[ ${ArgOrVal} == "Valeur" ]] && shift
+    shift
+done
+
+
+
+##############################################################
+## Vérifications et arrêt du script sur un message d'erreur ##
+##############################################################
+# Vérifie qu'un nombre a bien été donné
+[[ -z ${Progress} ]] && ErrorMsg arg_needs_progress
+
+# Nettoyage de la valeur indiquée
+[[ ${Progress} == "%" ]] && Progress="${Progress//\%}" # Suppression du % possible
+[[ ${Progress} == " " ]] && Progress="${Progress// }" # Suppression des espaces possibles
+
+# Suppression des 0 possibles de début
+[[ ${Progress:0:1} == "0" ]] && Progress=$(( 10#${Progress} ))
+
+# Vérifie que ${Progress} est bien un nombre
+[[ ${Progress} != +([0-9]) ]] && ErrorMsg input_number "${Progress}"
+
+# Vérifie que le chiffre ne dépasse pas 100%
+[[ ${Progress} -gt 100 ]] && ErrorMsg input_number_max
+
+# Vérifie que le chiffre est supérieur ou égal à 0
+[[ ${Progress} -lt 0 ]] && ErrorMsg input_number_min
+
+
+
+####################################
+## Création de la ligne de sortie ##
+####################################
+### Formatage du pourcentage à 3 chiffres afin que sa taille ne change jamais
+printf -v ProgressNumber "%03d" ${Progress}
+
+
+### Si on est arrivé à 100%, on prend les valeurs spécifiques à 100% ou celles par défaut si aucune info
+# il ne faut pas utiliser :- car si la variable est vide mais existante, elle est remplacée
+[[ ${Progress} -eq 100 ]] && Output="${OutputFinish-${Output}}"
+
+
+## Format avec les variables internes
+Line="${Output}"
+
+
+### Variables avec et sans mise en page, permet de faire les calculs sans que la couleur gène
+ColorCleaning "${Output}"
+LineRaw="${ColorCleaningValue}"
+
+# Remplacement de la progression, les tests sont plus rapides qu'un changement inutile
+[[ ${LineRaw} == *"%p"* ]] && LineRaw="${LineRaw//%p/${ProgressNumber}}"
+[[ ${LineRaw} == *"%P"* ]] && LineRaw="${LineRaw//%P/${ProgressNumber}%}"
+
+# Suppression des variables de barre
+[[ ${LineRaw} == *"%b1"* ]] && LineRaw="${LineRaw//%b1}"
+[[ ${LineRaw} == *"%b2"* ]] && LineRaw="${LineRaw//%b2}"
+[[ ${LineRaw} == *"%b"* ]] && LineRaw="${LineRaw//%b}"
+
+
+### Vérifie qu'il y a assez de place pour tout ce qui n'est pas barre
+[[ ${WidthTotal} -lt ${#LineRaw} ]] && ErrorMsg need_more_space
+
+
+### S'il y a une barre à afficher
+if [[ ${Output} == *"%b"* ]]
+then
+    ## Calcul de la largeur disponible pour la barre de progression
+    # Total - La place prise par tous les éléments + espaces bonus
+    WidthBar=$((WidthTotal - ${#LineRaw} + Space))
+
+
+    ## Nombre de colonne Body à utiliser et indirectement celui de ahead
+    ColumnBodyWithHead=$((WidthBar * Progress / 100))
+
+
+    ## En cas d'utilisation de %c, on le remplace par des espaces avant et après la chaine afin de la centrer dans la barre
+    # Ne pas faire de fonction car c'est beaucoup plus long
+    if [[ ${Body} == *"%c"* ]]
+    then
+        # Fonction de centrage du texte
+        TextCentering "${Body}"
+
+        # Nouvelle valeur de Body
+        printf -v Body "%s%${SpaceBefore}s%s%${SpaceAfter}s%s" "${TextBefore}" "" "${TextCenter}" "" "${TextAfter}"
+    fi
+
+    if [[ ${Remainder} == *"%c"* ]]
+    then
+        # Fonction de centrage du texte
+        TextCentering "${Remainder}"
+
+        # Nouvelle valeur de Remainder
+        printf -v Remainder "%s%${SpaceBefore}s%s%${SpaceAfter}s%s" "${TextBefore}" "" "${TextCenter}" "" "${TextAfter}"
+    fi
+
+
+    ## Conversion de strings en array en remplacant les espaces par des insécables pour eviter de les perdre en route
+    # Le 1 permet de forcer la couleur pour chaque caractère
+    if [[ ${Reverse} ]]; then StringToArray "${Body// / }" 1
+    else StringToArray "${Body// / }"; fi
+    BodyList=("${StringToArrayValue[@]}")
+
+    StringToArray "${Head// / }" 1
+    HeadList=("${StringToArrayValue[@]}")
+
+    if [[ ${Reverse} ]]; then StringToArray "${Remainder// / }"
+    else StringToArray "${Remainder// / }" 1; fi
+    RemainderList=("${StringToArrayValue[@]}")
+
+
+    ## Nombre de colonne pour le corps et l'ahead
+    # Soustraction de la tête au corps, la tête compte comme du corps, la valeur min est 0
+    ColumnBody=$((ColumnBodyWithHead - ${#HeadList[@]}))
+    [[ ${ColumnBody} -lt 0 ]] && ColumnBody=0
+
+    # Nombre de colonne d'en-tête
+    ColumnRemainder=$((WidthBar - ColumnBodyWithHead))
+
+
+    ## Création d'une barre remplie de ${ColumnBodyWithHead} Body
+    # Si on est à 0, il n'y a aucun corps, inutile de le travailler
+    if [[ ${Progress} -gt 0 ]]
+    then
+        # $1 : Taille max pour limiter la duplication d'éléments inutiles
+        # $2 : Permet de ne pas dupliquer
+        if [[ ${Reverse} ]]; then BarCreation ${WidthBar} "${BodyList[@]}"
+        else BarCreation ${ColumnBodyWithHead} "${BodyList[@]}"; fi
+        BodyProgress=("${BarCreationValue[@]}")
+    fi
+
+
+    ## Création d'une barre remplie de Remainder, impossible de diminuer le nombre
+    # Si on est à 100, il n'y a aucun ahead, inutile de le travailler
+    if [[ ${Progress} -lt 100 ]]
+    then
+        if [[ ${Reverse} ]]; then BarCreation $((WidthBar - ColumnBodyWithHead)) "${RemainderList[@]}"
+        else BarCreation ${WidthBar} "${RemainderList[@]}"; fi
+        RemainderProgress=("${BarCreationValue[@]}")
+    fi
+
+    # Coupe la tête si le corps ne permet pas de l'afficher, ex : le corps n'a qu'1 colonne mais la tête en fait 3
+    [[ ${#HeadList[@]} -gt ${ColumnBodyWithHead} ]] && ColumnHead=$((${#HeadList[@]} - ColumnBodyWithHead))
+
+# echo "Progress : $Progress"
+# echo "Body : $Body"
+# echo "BodyList : ${BodyList[@]}"
+# echo "BodyProgress[@] : ${#BodyProgress[@]} - ${BodyProgress[@]}"
+# echo "HeadList : ${#HeadList[@]} - ${HeadList[@]}"
+# echo "RemainderList : ${RemainderList[@]}"
+# echo "RemainderProgress[@] : ${#RemainderProgress[@]} - ${RemainderProgress[@]}"
+# echo "WidthTotal : $WidthTotal"
+# echo "WidthBar : $WidthBar"
+# echo "LineRaw : ${#LineRaw} - _${LineRaw}_"
+# echo "ColumnBodyWithHead : $ColumnBodyWithHead"
+# echo "ColumnBody : $ColumnBody"
+# echo "ColumnHead : $ColumnHead"
+
+    ## Assemblage de la barre finale toujours au format liste afin que ça puisse être coupée en 2 si besoin
+    # Cas spécifique au 100%
+    if [[ ${Progress} -eq 100 ]]
+    then
+        BarList=("${BodyProgress[@]:0:${WidthBar}}")
+
+    else
+        # Mode reverse
+        if [[ ${Reverse} ]]
+        then
+            # Il faut lire la tête à l'envers
+            SubHead=$((${#HeadList[@]} - ColumnHead))
+
+            BarList=("${RemainderProgress[@]:0:${ColumnRemainder}}%00")
+            [[ ${HeadList[*]:0:${SubHead}} ]] && BarList+=("${HeadList[@]:0:${SubHead}}%00")
+            [[ ${ColumnBody} -gt 0 ]] && BarList+=("${BodyProgress[@]: -${ColumnBody}}")
+
+        else
+            unset BarList
+            [[ ${BodyProgress[*]:0:${ColumnBody}} ]] && BarList+=("${BodyProgress[@]:0:${ColumnBody}}%00")
+            [[ ${HeadList[*]:${ColumnHead}} ]] && BarList+=("${HeadList[@]:${ColumnHead}}%00")
+            BarList+=("${RemainderProgress[@]:${ColumnBodyWithHead}:${ColumnRemainder}}")
+        fi
+    fi
+
+    ## Transformation de la liste en string
+    # Dans le cas de l'utilisation d'une barre coupée
+    if [[ ${Output} == *%b[12]* ]]
+    then
+        # Taille d'une barre
+        HalfBar=$((${#BarList[@]} / 2))
+
+        # Remplacement des variables %b[12] par les barres de progression
+        printf -v Barre1 "%s" "${BarList[@]:0:${HalfBar}}"
+        printf -v Barre2 "%s" "${BarList[@]:${HalfBar}:${HalfBar}}"
+        Line="${Line//%b1/${Barre1}%00}"
+        Line="${Line//%b2/${Barre2}%00}"
+
+    # Dans le cas de l'utilisation d'une barre simple
+    else
+        printf -v Barre "%s" "${BarList[@]}"
+
+        # Remplacement de la variable %b par la barre de progression
+        Line="${Line//%b/${Barre}%00}"
+    fi
+fi
+
+
+
+##########################
+## Gestion des couleurs ##
+##########################
+### Attribution des couleurs aléatoires
+if [[ ${Line} == *+(%\?|/\?)* ]]
+then
+    # $(( RANDOM % 256 )) remplace shuf -i0-255 -n1 qui est 25x plus lent
+
+    # Tourne tant qu'il y a une correspondance avec %?/0 ou %0/? qui sera visible dans BASH_REMATCH
+    while [[ ${Line} =~ %((\?)/([0-9\?]+)|([0-9]+/(\?))) ]]
+    do
+        # Attention il ne faut pas interpreter : % ? /
+        bla="${BASH_REMATCH[0]/#%}" bla="${bla//\?/\\?}" bla="${bla/\//\\/}"
+
+        # Numéros des couleurs
+        [[ ${BASH_REMATCH[2]} == "?" ]] && setaf=$(( RANDOM % 256 )) || setaf="${BASH_REMATCH[2]}"
+        [[ ${BASH_REMATCH[3]} == "?" ]] && setab=$(( RANDOM % 256 )) || setab="${BASH_REMATCH[3]}"
+
+        # Remplacement de la variable par sa couleur
+        Line="${Line/\%${bla}/\%${setaf}/${setab}}"
+    done
+
+    # Tourne tant qu'il y a une correspondance avec %?
+    while [[ "${Line}" == *%\?* ]]
+    do
+        # Mode aléatoire
+        Random1=$(( RANDOM % 256 ))
+
+        # Attention / suivit du % de la variable pose souci, d'où l'utilisation de ${Number/#%/\\%}
+        Line="${Line/\%\?/%${Random1}}"
+    done
+fi
+
+
+### Remplacement des variables couleurs par leur valeur
+# L'utilisation du texte \033[38;5;Xm est plus rapide que tput setaf
+# L'utilisation du texte \033[48;5;Xm est plus rapide que tput setab
+for REMatch in "${REMatchs[@]}"
+do
+    # Tant que ça matche
+    while [[ ${Line} =~ ${REMatch} ]]
+    do
+        # Si c'est un [0-9]/[0-9]
+        if [[ ${BASH_REMATCH[2]} ]]
+        then
+            Line="${Line//${BASH_REMATCH[0]/\//\\/}/\\033[38;5;${BASH_REMATCH[1]}m\\033[48;5;${BASH_REMATCH[2]}m}"
+
+        # Si c'est un [0-9]
+        else
+            # Si c'est %00 ou une couleur
+            [[ ${BASH_REMATCH[1]} == "00" ]] && Line="${Line//%00/\\e[0m}" || Line="${Line//${BASH_REMATCH[0]}/\\033[38;5;${BASH_REMATCH[1]}m}"
+        fi
+    done
+done
+
+
+
+############################################
+## Gestion des autres variables restantes ##
+############################################
+### Remplacement des %p et %P par la progression
+Line="${Line//%p/${ProgressNumber}}"
+Line="${Line//%P/${ProgressNumber}%}"
+
+
+### S'il reste des %c, ce sont ceux de -o et -of
+if [[ ${Line} == *"%c"* ]]
+then
+    # Fonction de centrage du texte
+    TextCentering "${Line}"
+
+    # Nouvelle valeur de Line
+    printf -v Line "%s%${SpaceBefore}s%s%${SpaceAfter}s%s" "${TextBefore}" "" "${TextCenter}" "" "${TextAfter}"
+fi
+
+
+
+#####################################
+## Affichage de la ligne de sortie ##
+#####################################
+echo -en "\r${Clear}${Line}${Unset}"
+
+
+# Mode Debug
+[[ ${Debug} ]] && DebugMsg
+
+
+# Retour à la ligne si on a atteint les 100%
+[[ ${Progress} -eq 100 ]] && echo
+
+
+##################
+## Arrêt normal ##
+##################
+exit 0
