@@ -79,7 +79,7 @@ This script allows you to create a completely customized progress bar as shown i
 
 ### Basic principle:
 The customization of the bar is done by defining its different elements:
-![01](https://user-images.githubusercontent.com/48289933/138561583-5540d3f9-63b7-42a2-9abc-66b1e0adc9da.png)
+![03](https://user-images.githubusercontent.com/48289933/138564131-973ecea1-972a-4326-9709-ca73cdf890dc.png)
  - **--body**: The body of the bar (default: character = color 4 (blue)).
  - **--head**: The head of the bar (default: character > color 1 (red)).
  - **--remainder** : The part not covered by the body and the head of the bar (default: no character).
